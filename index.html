@@ -78,12 +78,19 @@
       align-items: center;
       justify-content: space-between;
       gap: 12px;
+      flex-wrap: wrap;
     }
 
     .panel-topline h2 {
       margin: 0;
       font-size: 1.05rem;
       letter-spacing: -0.02em;
+    }
+
+    .top-controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
     }
 
     h1 {
@@ -178,7 +185,7 @@
     button.secondary, .file-button.secondary { background: var(--soft); color: #111827; }
     button:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
 
-    .theme-toggle {
+    .theme-toggle, .sound-toggle {
       padding: 9px 13px;
       font-size: 0.9rem;
     }
@@ -315,7 +322,10 @@
     <section class="panel">
       <div class="panel-topline">
         <h2>Wheel controls</h2>
-        <button id="themeToggle" class="secondary theme-toggle" type="button">🌙 Dark mode</button>
+        <div class="top-controls">
+          <button id="soundToggle" class="secondary sound-toggle" type="button">🔊 Sound on</button>
+          <button id="themeToggle" class="secondary theme-toggle" type="button">🌙 Dark mode</button>
+        </div>
       </div>
 
       <div class="instructions">
@@ -394,6 +404,7 @@ Tim</textarea>
     const fileStatus = document.getElementById("fileStatus");
     const confetti = document.getElementById("confetti");
     const themeToggle = document.getElementById("themeToggle");
+    const soundToggle = document.getElementById("soundToggle");
     const uploadInput = document.getElementById("uploadInput");
     const downloadBtn = document.getElementById("downloadBtn");
 
@@ -408,10 +419,17 @@ Tim</textarea>
     let spinning = false;
     let history = [];
     let dragState = null;
+    let soundMuted = localStorage.getItem("spin-wheel-muted") === "true";
+    let audioContext = null;
+    let lastTickTime = 0;
+    let lastTickSlice = null;
+
+    function splitLines(text) {
+      return text.split(String.fromCharCode(10));
+    }
 
     function parseNames() {
-      return namesInput.value
-        .split(/\n+/)
+      return splitLines(namesInput.value)
         .map(name => name.trim())
         .filter(Boolean);
     }
@@ -508,16 +526,63 @@ Tim</textarea>
       return ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
     }
 
-    function getSelectedIndex(finalRotation) {
+    function ensureAudioContext() {
+      if (soundMuted) return null;
+      if (!audioContext) {
+        const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextCtor) return null;
+        audioContext = new AudioContextCtor();
+      }
+      if (audioContext.state === "suspended") audioContext.resume();
+      return audioContext;
+    }
+
+    function playTone(frequency, duration, volume, type = "sine", delay = 0) {
+      const audio = ensureAudioContext();
+      if (!audio) return;
+
+      const startTime = audio.currentTime + delay;
+      const oscillator = audio.createOscillator();
+      const gain = audio.createGain();
+      oscillator.type = type;
+      oscillator.frequency.setValueAtTime(frequency, startTime);
+      gain.gain.setValueAtTime(0.0001, startTime);
+      gain.gain.exponentialRampToValueAtTime(volume, startTime + 0.005);
+      gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+      oscillator.connect(gain);
+      gain.connect(audio.destination);
+      oscillator.start(startTime);
+      oscillator.stop(startTime + duration + 0.02);
+    }
+
+    function playSpinTick() {
+      if (soundMuted) return;
+      playTone(420, 0.045, 0.08, "square");
+    }
+
+    function playWinnerSound() {
+      if (soundMuted) return;
+      playTone(523.25, 0.22, 0.12, "sine", 0);
+      playTone(659.25, 0.22, 0.12, "sine", 0.16);
+      playTone(783.99, 0.28, 0.13, "sine", 0.32);
+      playTone(1046.5, 0.45, 0.14, "triangle", 0.48);
+    }
+
+    function maybePlaySpinTick(now) {
+      if (!names.length || soundMuted) return;
       const slice = (Math.PI * 2) / names.length;
-      const pointerAngle = -Math.PI / 2;
-      const normalized = normalizeAngle(pointerAngle - finalRotation + Math.PI / 2);
-      return Math.floor(normalized / slice) % names.length;
+      const currentSlice = Math.floor(normalizeAngle(rotation) / slice);
+      if (currentSlice !== lastTickSlice && now - lastTickTime > 22) {
+        lastTickSlice = currentSlice;
+        lastTickTime = now;
+        playSpinTick();
+      }
     }
 
     function spinWheel(options = {}) {
       if (spinning || names.length < 2) return;
 
+      ensureAudioContext();
       spinning = true;
       spinBtn.disabled = true;
       updateBtn.disabled = true;
@@ -540,6 +605,7 @@ Tim</textarea>
         const t = Math.min(1, (now - start) / duration);
         rotation = startRotation + (endRotation - startRotation) * easeOutCubic(t);
         drawWheel();
+        maybePlaySpinTick(now);
 
         if (t < 1) {
           requestAnimationFrame(animate);
@@ -571,12 +637,13 @@ Tim</textarea>
       winnerLabel.textContent = "Winner!";
       winnerName.textContent = winner;
       winnerTimestamp.textContent = `Selected ${timestamp.toLocaleString()}`;
+      playWinnerSound();
       announceWinner(winner);
       burstConfetti();
     }
 
     function announceWinner(winner) {
-      if (!("speechSynthesis" in window)) return;
+      if (soundMuted || !("speechSynthesis" in window)) return;
       speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(`The winner is ${winner}`);
       utterance.rate = 0.95;
@@ -604,7 +671,7 @@ Tim</textarea>
         const j = Math.floor(Math.random() * (i + 1));
         [list[i], list[j]] = [list[j], list[i]];
       }
-      namesInput.value = list.join("\n");
+      namesInput.value = list.join(String.fromCharCode(10));
       updateWheel("Names shuffled.");
     }
 
@@ -615,9 +682,17 @@ Tim</textarea>
       drawWheel();
     }
 
+    function setSoundMuted(muted) {
+      soundMuted = muted;
+      localStorage.setItem("spin-wheel-muted", String(muted));
+      soundToggle.textContent = muted ? "🔇 Sound off" : "🔊 Sound on";
+      soundToggle.setAttribute("aria-pressed", String(!muted));
+      if (muted && "speechSynthesis" in window) speechSynthesis.cancel();
+    }
+
     function downloadWheelFile() {
       const payload = {
-        version: 2,
+        version: 3,
         question: titleInput.value.trim() || "Spin the Wheel",
         names: parseNames(),
         history
@@ -647,7 +722,7 @@ Tim</textarea>
           }
 
           titleInput.value = payload.question;
-          namesInput.value = payload.names.map(name => String(name).trim()).filter(Boolean).join("\n");
+          namesInput.value = payload.names.map(name => String(name).trim()).filter(Boolean).join(String.fromCharCode(10));
           history = Array.isArray(payload.history) ? payload.history : [];
           updateWheel(`Loaded ${payload.names.length} name${payload.names.length === 1 ? "" : "s"} and ${history.length} recorded spin${history.length === 1 ? "" : "s"} from ${file.name}.`);
         } catch (error) {
@@ -666,19 +741,12 @@ Tim</textarea>
       return Math.atan2(y, x);
     }
 
-    function pointerDistanceFromCenter(event) {
-      const rect = canvas.getBoundingClientRect();
-      const x = event.clientX - (rect.left + rect.width / 2);
-      const y = event.clientY - (rect.top + rect.height / 2);
-      return Math.hypot(x, y);
-    }
-
     wheelWrap.addEventListener("pointerdown", event => {
       if (spinning || names.length < 2) return;
+      ensureAudioContext();
       wheelWrap.setPointerCapture(event.pointerId);
       dragState = {
         pointerId: event.pointerId,
-        startAngle: pointerAngle(event),
         lastAngle: pointerAngle(event),
         lastTime: performance.now(),
         angularVelocity: 0,
@@ -702,6 +770,7 @@ Tim</textarea>
       dragState.lastAngle = angle;
       dragState.lastTime = now;
       drawWheel();
+      maybePlaySpinTick(now);
     });
 
     function finishPointerSpin(event) {
@@ -733,6 +802,7 @@ Tim</textarea>
       const nextTheme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
       setTheme(nextTheme);
     });
+    soundToggle.addEventListener("click", () => setSoundMuted(!soundMuted));
 
     clearWinnerBtn.addEventListener("click", () => {
       clearWinnerDisplay(names.length ? "Ready when you are." : "Add at least two names to spin.");
@@ -750,6 +820,7 @@ Tim</textarea>
     });
 
     setTheme(localStorage.getItem("spin-wheel-theme") || "light");
+    setSoundMuted(soundMuted);
     updateWheel();
   </script>
 </body>
