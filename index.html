@@ -7,7 +7,7 @@
   <style>
     :root {
       --bg: #f8fafc;
-      --panel: rgba(255, 255, 255, 0.9);
+      --panel: rgba(255, 255, 255, 0.92);
       --text: #172033;
       --muted: #64748b;
       --accent: #0ea5e9;
@@ -23,7 +23,7 @@
 
     html[data-theme="dark"] {
       --bg: #111827;
-      --panel: rgba(31, 41, 55, 0.9);
+      --panel: rgba(31, 41, 55, 0.92);
       --text: #f9fafb;
       --muted: #cbd5e1;
       --accent: #38bdf8;
@@ -57,7 +57,7 @@
     .app {
       width: min(1200px, 100%);
       display: grid;
-      grid-template-columns: 390px 1fr;
+      grid-template-columns: 390px minmax(0, 1fr);
       gap: 24px;
       align-items: start;
     }
@@ -87,7 +87,7 @@
     }
 
     h1 {
-      margin: 0 0 12px;
+      margin: 0 0 18px;
       font-size: clamp(2rem, 4vw, 4.5rem);
       text-align: center;
       letter-spacing: -0.055em;
@@ -187,20 +187,33 @@
 
     .stage {
       padding: 28px;
-      display: grid;
-      place-items: center;
       min-height: 760px;
       position: relative;
       overflow: hidden;
     }
 
+    .stage-inner {
+      width: 100%;
+      max-width: 760px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
     .wheel-wrap {
       position: relative;
-      width: min(640px, 88vw);
+      width: min(640px, 100%);
       aspect-ratio: 1;
       display: grid;
       place-items: center;
+      margin: 0 auto;
+      touch-action: none;
+      user-select: none;
+      cursor: grab;
     }
+
+    .wheel-wrap.dragging { cursor: grabbing; }
 
     .pointer {
       position: absolute;
@@ -214,6 +227,7 @@
       border-top: 48px solid var(--accent-2);
       z-index: 5;
       filter: drop-shadow(0 4px 4px rgba(0,0,0,0.24));
+      pointer-events: none;
     }
 
     canvas {
@@ -236,12 +250,13 @@
       letter-spacing: -0.04em;
       box-shadow: inset 0 0 0 8px #cbd5e1, 0 10px 30px rgba(0,0,0,0.24);
       user-select: none;
+      pointer-events: none;
     }
 
     .winner {
       text-align: center;
       margin-top: 24px;
-      min-height: 110px;
+      min-height: 138px;
     }
 
     .winner .small {
@@ -256,6 +271,12 @@
       letter-spacing: -0.06em;
       color: var(--accent-2);
       text-shadow: 0 4px 20px rgba(250, 204, 21, 0.2);
+    }
+
+    .winner .timestamp {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 0.95rem;
     }
 
     .confetti {
@@ -302,7 +323,7 @@
         <ol>
           <li>Type your question and enter one name per line.</li>
           <li>Select <strong>Update wheel</strong>, or load a saved wheel file.</li>
-          <li>Select <strong>Spin the wheel</strong> and let fate do its paperwork.</li>
+          <li>Select <strong>Spin the wheel</strong>, click the wheel, or drag and release it.</li>
         </ol>
       </div>
 
@@ -338,9 +359,9 @@ Tim</textarea>
     </section>
 
     <section class="stage">
-      <div>
+      <div class="stage-inner">
         <h1 id="displayTitle">Who wins the glorious wheel?</h1>
-        <div class="wheel-wrap">
+        <div class="wheel-wrap" id="wheelWrap" aria-label="Interactive prize wheel. Click or drag and release to spin.">
           <div class="pointer" aria-hidden="true"></div>
           <canvas id="wheel" width="900" height="900"></canvas>
           <div class="hub">SPIN</div>
@@ -348,6 +369,7 @@ Tim</textarea>
         <div class="winner" aria-live="polite">
           <div class="small" id="winnerLabel">Ready when you are.</div>
           <div class="name" id="winnerName"></div>
+          <div class="timestamp" id="winnerTimestamp"></div>
         </div>
       </div>
       <div class="confetti" id="confetti"></div>
@@ -357,6 +379,7 @@ Tim</textarea>
   <script>
     const canvas = document.getElementById("wheel");
     const ctx = canvas.getContext("2d");
+    const wheelWrap = document.getElementById("wheelWrap");
     const titleInput = document.getElementById("wheelTitle");
     const namesInput = document.getElementById("names");
     const displayTitle = document.getElementById("displayTitle");
@@ -366,6 +389,7 @@ Tim</textarea>
     const clearWinnerBtn = document.getElementById("clearWinnerBtn");
     const winnerLabel = document.getElementById("winnerLabel");
     const winnerName = document.getElementById("winnerName");
+    const winnerTimestamp = document.getElementById("winnerTimestamp");
     const countHint = document.getElementById("countHint");
     const fileStatus = document.getElementById("fileStatus");
     const confetti = document.getElementById("confetti");
@@ -382,6 +406,8 @@ Tim</textarea>
     let names = [];
     let rotation = 0;
     let spinning = false;
+    let history = [];
+    let dragState = null;
 
     function parseNames() {
       return namesInput.value
@@ -394,11 +420,16 @@ Tim</textarea>
       names = parseNames();
       displayTitle.textContent = titleInput.value.trim() || "Spin the Wheel";
       countHint.textContent = `${names.length} name${names.length === 1 ? "" : "s"} on the wheel.`;
-      winnerLabel.textContent = names.length ? "Ready when you are." : "Add at least two names to spin.";
-      winnerName.textContent = "";
+      clearWinnerDisplay(names.length ? "Ready when you are." : "Add at least two names to spin.");
       spinBtn.disabled = names.length < 2 || spinning;
       if (message) fileStatus.textContent = message;
       drawWheel();
+    }
+
+    function clearWinnerDisplay(labelText = "Ready when you are.") {
+      winnerLabel.textContent = labelText;
+      winnerName.textContent = "";
+      winnerTimestamp.textContent = "";
     }
 
     function drawWheel() {
@@ -473,25 +504,36 @@ Tim</textarea>
       return 1 - Math.pow(1 - t, 3);
     }
 
-    function spinWheel() {
+    function normalizeAngle(angle) {
+      return ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+    }
+
+    function getSelectedIndex(finalRotation) {
+      const slice = (Math.PI * 2) / names.length;
+      const pointerAngle = -Math.PI / 2;
+      const normalized = normalizeAngle(pointerAngle - finalRotation + Math.PI / 2);
+      return Math.floor(normalized / slice) % names.length;
+    }
+
+    function spinWheel(options = {}) {
       if (spinning || names.length < 2) return;
 
       spinning = true;
       spinBtn.disabled = true;
       updateBtn.disabled = true;
       shuffleBtn.disabled = true;
-      winnerLabel.textContent = "The wheel is deciding...";
-      winnerName.textContent = "";
+      clearWinnerDisplay("The wheel is deciding...");
 
       const targetIndex = Math.floor(Math.random() * names.length);
       const slice = (Math.PI * 2) / names.length;
       const pointerAngle = -Math.PI / 2;
       const targetSliceCenter = targetIndex * slice - Math.PI / 2 + slice / 2;
       const desiredRotation = pointerAngle - targetSliceCenter;
-      const extraSpins = (5 + Math.floor(Math.random() * 4)) * Math.PI * 2;
+      const extraTurns = options.extraTurns ?? (5 + Math.floor(Math.random() * 4));
+      const extraSpins = extraTurns * Math.PI * 2;
       const startRotation = rotation;
       const endRotation = startRotation + extraSpins + normalizeAngle(desiredRotation - startRotation);
-      const duration = 4300 + Math.random() * 900;
+      const duration = options.duration ?? (4300 + Math.random() * 900);
       const start = performance.now();
 
       function animate(now) {
@@ -505,10 +547,7 @@ Tim</textarea>
           rotation = endRotation % (Math.PI * 2);
           drawWheel();
           const winner = names[targetIndex];
-          winnerLabel.textContent = "Winner!";
-          winnerName.textContent = winner;
-          announceWinner(winner);
-          burstConfetti();
+          recordWinner(winner);
           spinning = false;
           spinBtn.disabled = false;
           updateBtn.disabled = false;
@@ -519,8 +558,21 @@ Tim</textarea>
       requestAnimationFrame(animate);
     }
 
-    function normalizeAngle(angle) {
-      return ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+    function recordWinner(winner) {
+      const timestamp = new Date();
+      const entry = {
+        question: titleInput.value.trim() || "Spin the Wheel",
+        names: [...names],
+        winner,
+        timestamp: timestamp.toISOString()
+      };
+
+      history.push(entry);
+      winnerLabel.textContent = "Winner!";
+      winnerName.textContent = winner;
+      winnerTimestamp.textContent = `Selected ${timestamp.toLocaleString()}`;
+      announceWinner(winner);
+      burstConfetti();
     }
 
     function announceWinner(winner) {
@@ -565,9 +617,10 @@ Tim</textarea>
 
     function downloadWheelFile() {
       const payload = {
-        version: 1,
+        version: 2,
         question: titleInput.value.trim() || "Spin the Wheel",
-        names: parseNames()
+        names: parseNames(),
+        history
       };
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
@@ -578,7 +631,7 @@ Tim</textarea>
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
-      fileStatus.textContent = "Wheel file downloaded. Keep it somewhere sensible, unlike that one cable drawer.";
+      fileStatus.textContent = `Wheel file downloaded with ${history.length} recorded spin${history.length === 1 ? "" : "s"}.`;
     }
 
     function uploadWheelFile(event) {
@@ -595,7 +648,8 @@ Tim</textarea>
 
           titleInput.value = payload.question;
           namesInput.value = payload.names.map(name => String(name).trim()).filter(Boolean).join("\n");
-          updateWheel(`Loaded ${payload.names.length} name${payload.names.length === 1 ? "" : "s"} from ${file.name}.`);
+          history = Array.isArray(payload.history) ? payload.history : [];
+          updateWheel(`Loaded ${payload.names.length} name${payload.names.length === 1 ? "" : "s"} and ${history.length} recorded spin${history.length === 1 ? "" : "s"} from ${file.name}.`);
         } catch (error) {
           fileStatus.textContent = "That file could not be loaded. Choose a wheel JSON file downloaded from this app.";
         } finally {
@@ -605,8 +659,73 @@ Tim</textarea>
       reader.readAsText(file);
     }
 
+    function pointerAngle(event) {
+      const rect = canvas.getBoundingClientRect();
+      const x = event.clientX - (rect.left + rect.width / 2);
+      const y = event.clientY - (rect.top + rect.height / 2);
+      return Math.atan2(y, x);
+    }
+
+    function pointerDistanceFromCenter(event) {
+      const rect = canvas.getBoundingClientRect();
+      const x = event.clientX - (rect.left + rect.width / 2);
+      const y = event.clientY - (rect.top + rect.height / 2);
+      return Math.hypot(x, y);
+    }
+
+    wheelWrap.addEventListener("pointerdown", event => {
+      if (spinning || names.length < 2) return;
+      wheelWrap.setPointerCapture(event.pointerId);
+      dragState = {
+        pointerId: event.pointerId,
+        startAngle: pointerAngle(event),
+        lastAngle: pointerAngle(event),
+        lastTime: performance.now(),
+        angularVelocity: 0,
+        moved: false
+      };
+      wheelWrap.classList.add("dragging");
+    });
+
+    wheelWrap.addEventListener("pointermove", event => {
+      if (!dragState || dragState.pointerId !== event.pointerId || spinning) return;
+      const now = performance.now();
+      const angle = pointerAngle(event);
+      let delta = angle - dragState.lastAngle;
+      if (delta > Math.PI) delta -= Math.PI * 2;
+      if (delta < -Math.PI) delta += Math.PI * 2;
+
+      if (Math.abs(delta) > 0.002) dragState.moved = true;
+      rotation += delta;
+      const elapsed = Math.max(16, now - dragState.lastTime);
+      dragState.angularVelocity = delta / elapsed;
+      dragState.lastAngle = angle;
+      dragState.lastTime = now;
+      drawWheel();
+    });
+
+    function finishPointerSpin(event) {
+      if (!dragState || dragState.pointerId !== event.pointerId) return;
+      const state = dragState;
+      dragState = null;
+      wheelWrap.classList.remove("dragging");
+
+      if (!state.moved) {
+        spinWheel();
+        return;
+      }
+
+      const speed = Math.abs(state.angularVelocity);
+      const extraTurns = Math.max(3, Math.min(10, Math.round(speed * 900)));
+      const duration = Math.max(2600, Math.min(6200, 2800 + speed * 180000));
+      spinWheel({ extraTurns, duration });
+    }
+
+    wheelWrap.addEventListener("pointerup", finishPointerSpin);
+    wheelWrap.addEventListener("pointercancel", finishPointerSpin);
+
     updateBtn.addEventListener("click", () => updateWheel("Wheel updated."));
-    spinBtn.addEventListener("click", spinWheel);
+    spinBtn.addEventListener("click", () => spinWheel());
     shuffleBtn.addEventListener("click", shuffleNames);
     downloadBtn.addEventListener("click", downloadWheelFile);
     uploadInput.addEventListener("change", uploadWheelFile);
@@ -616,8 +735,7 @@ Tim</textarea>
     });
 
     clearWinnerBtn.addEventListener("click", () => {
-      winnerLabel.textContent = names.length ? "Ready when you are." : "Add at least two names to spin.";
-      winnerName.textContent = "";
+      clearWinnerDisplay(names.length ? "Ready when you are." : "Add at least two names to spin.");
       if ("speechSynthesis" in window) speechSynthesis.cancel();
     });
 
