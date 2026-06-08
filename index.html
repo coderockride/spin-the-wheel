@@ -1,18 +1,40 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Spin the Wheel</title>
   <style>
     :root {
+      --bg: #f8fafc;
+      --panel: rgba(255, 255, 255, 0.9);
+      --text: #172033;
+      --muted: #64748b;
+      --accent: #0ea5e9;
+      --accent-2: #d97706;
+      --border: rgba(15, 23, 42, 0.12);
+      --input-bg: #ffffff;
+      --input-text: #172033;
+      --soft: #e2e8f0;
+      --shadow: rgba(15, 23, 42, 0.16);
+      --canvas-empty: #e2e8f0;
+      --canvas-empty-text: #475569;
+    }
+
+    html[data-theme="dark"] {
       --bg: #111827;
-      --panel: #1f2937;
+      --panel: rgba(31, 41, 55, 0.9);
       --text: #f9fafb;
       --muted: #cbd5e1;
       --accent: #38bdf8;
       --accent-2: #facc15;
-      --danger: #fb7185;
+      --border: rgba(255, 255, 255, 0.14);
+      --input-bg: #0f172a;
+      --input-text: #f9fafb;
+      --soft: #e5e7eb;
+      --shadow: rgba(0, 0, 0, 0.32);
+      --canvas-empty: #0f172a;
+      --canvas-empty-text: #cbd5e1;
     }
 
     * { box-sizing: border-box; }
@@ -22,32 +44,47 @@
       min-height: 100vh;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       background:
-        radial-gradient(circle at top left, rgba(56, 189, 248, 0.22), transparent 34%),
-        radial-gradient(circle at bottom right, rgba(250, 204, 21, 0.18), transparent 30%),
+        radial-gradient(circle at top left, rgba(56, 189, 248, 0.18), transparent 34%),
+        radial-gradient(circle at bottom right, rgba(250, 204, 21, 0.12), transparent 30%),
         var(--bg);
       color: var(--text);
       display: flex;
       justify-content: center;
       padding: 28px;
+      transition: background 0.25s ease, color 0.25s ease;
     }
 
     .app {
-      width: min(1180px, 100%);
+      width: min(1200px, 100%);
       display: grid;
-      grid-template-columns: 370px 1fr;
+      grid-template-columns: 390px 1fr;
       gap: 24px;
       align-items: start;
     }
 
     .panel, .stage {
-      background: rgba(31, 41, 55, 0.88);
-      border: 1px solid rgba(255,255,255,0.12);
+      background: var(--panel);
+      border: 1px solid var(--border);
       border-radius: 24px;
-      box-shadow: 0 22px 70px rgba(0,0,0,0.28);
+      box-shadow: 0 22px 70px var(--shadow);
       backdrop-filter: blur(10px);
+      transition: background 0.25s ease, border-color 0.25s ease;
     }
 
     .panel { padding: 22px; }
+
+    .panel-topline {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .panel-topline h2 {
+      margin: 0;
+      font-size: 1.05rem;
+      letter-spacing: -0.02em;
+    }
 
     h1 {
       margin: 0 0 12px;
@@ -65,17 +102,18 @@
 
     input, textarea {
       width: 100%;
-      border: 1px solid rgba(255,255,255,0.14);
-      background: #0f172a;
-      color: var(--text);
+      border: 1px solid var(--border);
+      background: var(--input-bg);
+      color: var(--input-text);
       border-radius: 14px;
       padding: 12px 14px;
       font: inherit;
       outline: none;
+      transition: background 0.25s ease, color 0.25s ease, border-color 0.25s ease;
     }
 
     textarea {
-      min-height: 240px;
+      min-height: 220px;
       resize: vertical;
       line-height: 1.4;
     }
@@ -91,6 +129,27 @@
       margin-top: 8px;
     }
 
+    .instructions {
+      margin: 18px 0 0;
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: rgba(14, 165, 233, 0.1);
+      border: 1px solid rgba(14, 165, 233, 0.2);
+    }
+
+    .instructions h3 {
+      margin: 0 0 8px;
+      font-size: 1rem;
+    }
+
+    .instructions ol {
+      margin: 0;
+      padding-left: 1.25rem;
+      color: var(--muted);
+    }
+
+    .instructions li + li { margin-top: 6px; }
+
     .buttons {
       display: flex;
       gap: 10px;
@@ -98,7 +157,7 @@
       margin-top: 18px;
     }
 
-    button {
+    button, .file-button {
       border: 0;
       border-radius: 999px;
       padding: 12px 18px;
@@ -107,19 +166,30 @@
       color: #082f49;
       background: var(--accent);
       transition: transform 0.12s ease, filter 0.12s ease;
+      font: inherit;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
 
-    button:hover { transform: translateY(-1px); filter: brightness(1.05); }
-    button:active { transform: translateY(1px); }
-    button.secondary { background: #e5e7eb; color: #111827; }
-    button.danger { background: var(--danger); color: white; }
+    button:hover, .file-button:hover { transform: translateY(-1px); filter: brightness(1.05); }
+    button:active, .file-button:active { transform: translateY(1px); }
+    button.secondary, .file-button.secondary { background: var(--soft); color: #111827; }
     button:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+
+    .theme-toggle {
+      padding: 9px 13px;
+      font-size: 0.9rem;
+    }
+
+    .file-input { display: none; }
 
     .stage {
       padding: 28px;
       display: grid;
       place-items: center;
-      min-height: 720px;
+      min-height: 760px;
       position: relative;
       overflow: hidden;
     }
@@ -143,14 +213,14 @@
       border-right: 22px solid transparent;
       border-top: 48px solid var(--accent-2);
       z-index: 5;
-      filter: drop-shadow(0 4px 4px rgba(0,0,0,0.32));
+      filter: drop-shadow(0 4px 4px rgba(0,0,0,0.24));
     }
 
     canvas {
       width: 100%;
       height: 100%;
       border-radius: 50%;
-      filter: drop-shadow(0 22px 34px rgba(0,0,0,0.35));
+      filter: drop-shadow(0 22px 34px rgba(0,0,0,0.28));
     }
 
     .hub {
@@ -185,7 +255,7 @@
       font-weight: 950;
       letter-spacing: -0.06em;
       color: var(--accent-2);
-      text-shadow: 0 4px 20px rgba(250, 204, 21, 0.22);
+      text-shadow: 0 4px 20px rgba(250, 204, 21, 0.2);
     }
 
     .confetti {
@@ -206,7 +276,7 @@
 
     @keyframes fall {
       to {
-        transform: translateY(780px) rotate(680deg);
+        transform: translateY(820px) rotate(680deg);
         opacity: 0.2;
       }
     }
@@ -222,7 +292,21 @@
 <body>
   <main class="app">
     <section class="panel">
-      <label for="wheelTitle">Wheel title</label>
+      <div class="panel-topline">
+        <h2>Wheel controls</h2>
+        <button id="themeToggle" class="secondary theme-toggle" type="button">🌙 Dark mode</button>
+      </div>
+
+      <div class="instructions">
+        <h3>How to use it</h3>
+        <ol>
+          <li>Type your question and enter one name per line.</li>
+          <li>Select <strong>Update wheel</strong>, or load a saved wheel file.</li>
+          <li>Select <strong>Spin the wheel</strong> and let fate do its paperwork.</li>
+        </ol>
+      </div>
+
+      <label for="wheelTitle">Question</label>
       <input id="wheelTitle" value="Who wins the glorious wheel?" />
 
       <label for="names">Names</label>
@@ -237,13 +321,20 @@ Tim</textarea>
       <div class="hint">Enter one name per line. Blank lines are ignored.</div>
 
       <div class="buttons">
-        <button id="updateBtn">Update wheel</button>
-        <button id="spinBtn">Spin the wheel</button>
-        <button id="clearWinnerBtn" class="secondary">Clear winner</button>
-        <button id="shuffleBtn" class="secondary">Shuffle names</button>
+        <button id="updateBtn" type="button">Update wheel</button>
+        <button id="spinBtn" type="button">Spin the wheel</button>
+        <button id="clearWinnerBtn" class="secondary" type="button">Clear winner</button>
+        <button id="shuffleBtn" class="secondary" type="button">Shuffle names</button>
+      </div>
+
+      <div class="buttons">
+        <label class="file-button secondary" for="uploadInput">Upload saved wheel</label>
+        <input id="uploadInput" class="file-input" type="file" accept="application/json,.json" />
+        <button id="downloadBtn" class="secondary" type="button">Download wheel file</button>
       </div>
 
       <div class="hint" id="countHint"></div>
+      <div class="hint" id="fileStatus" aria-live="polite"></div>
     </section>
 
     <section class="stage">
@@ -276,7 +367,11 @@ Tim</textarea>
     const winnerLabel = document.getElementById("winnerLabel");
     const winnerName = document.getElementById("winnerName");
     const countHint = document.getElementById("countHint");
+    const fileStatus = document.getElementById("fileStatus");
     const confetti = document.getElementById("confetti");
+    const themeToggle = document.getElementById("themeToggle");
+    const uploadInput = document.getElementById("uploadInput");
+    const downloadBtn = document.getElementById("downloadBtn");
 
     const colours = [
       "#38bdf8", "#facc15", "#fb7185", "#34d399",
@@ -295,13 +390,14 @@ Tim</textarea>
         .filter(Boolean);
     }
 
-    function updateWheel() {
+    function updateWheel(message = "") {
       names = parseNames();
       displayTitle.textContent = titleInput.value.trim() || "Spin the Wheel";
       countHint.textContent = `${names.length} name${names.length === 1 ? "" : "s"} on the wheel.`;
       winnerLabel.textContent = names.length ? "Ready when you are." : "Add at least two names to spin.";
       winnerName.textContent = "";
       spinBtn.disabled = names.length < 2 || spinning;
+      if (message) fileStatus.textContent = message;
       drawWheel();
     }
 
@@ -315,11 +411,12 @@ Tim</textarea>
       ctx.clearRect(0, 0, w, h);
 
       if (!names.length) {
-        ctx.fillStyle = "#0f172a";
+        const styles = getComputedStyle(document.documentElement);
+        ctx.fillStyle = styles.getPropertyValue("--canvas-empty").trim();
         ctx.beginPath();
         ctx.arc(cx, cy, radius, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = "#cbd5e1";
+        ctx.fillStyle = styles.getPropertyValue("--canvas-empty-text").trim();
         ctx.font = "bold 44px system-ui";
         ctx.textAlign = "center";
         ctx.fillText("Add names", cx, cy);
@@ -327,7 +424,6 @@ Tim</textarea>
       }
 
       const slice = (Math.PI * 2) / names.length;
-
       ctx.save();
       ctx.translate(cx, cy);
       ctx.rotate(rotation);
@@ -370,7 +466,6 @@ Tim</textarea>
       ctx.lineWidth = 10;
       ctx.strokeStyle = "rgba(255,255,255,0.9)";
       ctx.stroke();
-
       ctx.restore();
     }
 
@@ -390,14 +485,12 @@ Tim</textarea>
 
       const targetIndex = Math.floor(Math.random() * names.length);
       const slice = (Math.PI * 2) / names.length;
-
       const pointerAngle = -Math.PI / 2;
       const targetSliceCenter = targetIndex * slice - Math.PI / 2 + slice / 2;
       const desiredRotation = pointerAngle - targetSliceCenter;
       const extraSpins = (5 + Math.floor(Math.random() * 4)) * Math.PI * 2;
       const startRotation = rotation;
       const endRotation = startRotation + extraSpins + normalizeAngle(desiredRotation - startRotation);
-
       const duration = 4300 + Math.random() * 900;
       const start = performance.now();
 
@@ -411,13 +504,11 @@ Tim</textarea>
         } else {
           rotation = endRotation % (Math.PI * 2);
           drawWheel();
-
           const winner = names[targetIndex];
           winnerLabel.textContent = "Winner!";
           winnerName.textContent = winner;
           announceWinner(winner);
           burstConfetti();
-
           spinning = false;
           spinBtn.disabled = false;
           updateBtn.disabled = false;
@@ -462,25 +553,85 @@ Tim</textarea>
         [list[i], list[j]] = [list[j], list[i]];
       }
       namesInput.value = list.join("\n");
-      updateWheel();
+      updateWheel("Names shuffled.");
     }
 
-    updateBtn.addEventListener("click", updateWheel);
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      themeToggle.textContent = theme === "dark" ? "☀️ Light mode" : "🌙 Dark mode";
+      localStorage.setItem("spin-wheel-theme", theme);
+      drawWheel();
+    }
+
+    function downloadWheelFile() {
+      const payload = {
+        version: 1,
+        question: titleInput.value.trim() || "Spin the Wheel",
+        names: parseNames()
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "spin-the-wheel.json";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      fileStatus.textContent = "Wheel file downloaded. Keep it somewhere sensible, unlike that one cable drawer.";
+    }
+
+    function uploadWheelFile(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const payload = JSON.parse(reader.result);
+          if (!payload || typeof payload.question !== "string" || !Array.isArray(payload.names)) {
+            throw new Error("Invalid wheel file");
+          }
+
+          titleInput.value = payload.question;
+          namesInput.value = payload.names.map(name => String(name).trim()).filter(Boolean).join("\n");
+          updateWheel(`Loaded ${payload.names.length} name${payload.names.length === 1 ? "" : "s"} from ${file.name}.`);
+        } catch (error) {
+          fileStatus.textContent = "That file could not be loaded. Choose a wheel JSON file downloaded from this app.";
+        } finally {
+          uploadInput.value = "";
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    updateBtn.addEventListener("click", () => updateWheel("Wheel updated."));
     spinBtn.addEventListener("click", spinWheel);
     shuffleBtn.addEventListener("click", shuffleNames);
+    downloadBtn.addEventListener("click", downloadWheelFile);
+    uploadInput.addEventListener("change", uploadWheelFile);
+    themeToggle.addEventListener("click", () => {
+      const nextTheme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+      setTheme(nextTheme);
+    });
+
     clearWinnerBtn.addEventListener("click", () => {
       winnerLabel.textContent = names.length ? "Ready when you are." : "Add at least two names to spin.";
       winnerName.textContent = "";
-      speechSynthesis?.cancel?.();
+      if ("speechSynthesis" in window) speechSynthesis.cancel();
     });
 
-    titleInput.addEventListener("input", () => displayTitle.textContent = titleInput.value.trim() || "Spin the Wheel");
+    titleInput.addEventListener("input", () => {
+      displayTitle.textContent = titleInput.value.trim() || "Spin the Wheel";
+    });
+
     namesInput.addEventListener("input", () => {
       names = parseNames();
       countHint.textContent = `${names.length} name${names.length === 1 ? "" : "s"} on the wheel.`;
       spinBtn.disabled = names.length < 2 || spinning;
     });
 
+    setTheme(localStorage.getItem("spin-wheel-theme") || "light");
     updateWheel();
   </script>
 </body>
