@@ -19,6 +19,7 @@
       --shadow: rgba(15, 23, 42, 0.16);
       --canvas-empty: #e2e8f0;
       --canvas-empty-text: #475569;
+      --history-row: rgba(15, 23, 42, 0.035);
     }
 
     html[data-theme="dark"] {
@@ -35,6 +36,7 @@
       --shadow: rgba(0, 0, 0, 0.32);
       --canvas-empty: #0f172a;
       --canvas-empty-text: #cbd5e1;
+      --history-row: rgba(255, 255, 255, 0.05);
     }
 
     * { box-sizing: border-box; }
@@ -192,6 +194,30 @@
 
     .file-input { display: none; }
 
+    .option-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 16px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: var(--history-row);
+      border: 1px solid var(--border);
+    }
+
+    .option-row input {
+      width: auto;
+      margin: 0;
+      accent-color: var(--accent);
+    }
+
+    .option-row label {
+      display: inline;
+      margin: 0;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
     .stage {
       padding: 28px;
       min-height: 760px;
@@ -286,6 +312,68 @@
       font-size: 0.95rem;
     }
 
+    .history-card {
+      width: 100%;
+      margin-top: 12px;
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: var(--history-row);
+    }
+
+    .history-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .history-header h2 {
+      margin: 0;
+      font-size: 1.15rem;
+      letter-spacing: -0.03em;
+    }
+
+    .history-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      max-height: 260px;
+      overflow: auto;
+    }
+
+    .history-item {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 8px 12px;
+      padding: 12px 0;
+      border-top: 1px solid var(--border);
+    }
+
+    .history-item:first-child { border-top: 0; }
+
+    .history-number {
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .history-winner {
+      font-weight: 900;
+    }
+
+    .history-meta {
+      grid-column: 2;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .history-empty {
+      color: var(--muted);
+      margin: 0;
+    }
+
     .confetti {
       pointer-events: none;
       position: absolute;
@@ -351,6 +439,11 @@ Margaret
 Tim</textarea>
       <div class="hint">Enter one name per line. Blank lines are ignored.</div>
 
+      <div class="option-row">
+        <input id="removeWinner" type="checkbox" />
+        <label for="removeWinner">Remove each winner from the wheel after selection</label>
+      </div>
+
       <div class="buttons">
         <button id="updateBtn" type="button">Update wheel</button>
         <button id="spinBtn" type="button">Spin the wheel</button>
@@ -381,6 +474,15 @@ Tim</textarea>
           <div class="name" id="winnerName"></div>
           <div class="timestamp" id="winnerTimestamp"></div>
         </div>
+
+        <section class="history-card" aria-labelledby="historyTitle">
+          <div class="history-header">
+            <h2 id="historyTitle">Spin history</h2>
+            <button id="clearHistoryBtn" class="secondary" type="button">Clear history</button>
+          </div>
+          <p id="historyEmpty" class="history-empty">No spins recorded yet.</p>
+          <ol id="historyList" class="history-list"></ol>
+        </section>
       </div>
       <div class="confetti" id="confetti"></div>
     </section>
@@ -397,6 +499,8 @@ Tim</textarea>
     const updateBtn = document.getElementById("updateBtn");
     const shuffleBtn = document.getElementById("shuffleBtn");
     const clearWinnerBtn = document.getElementById("clearWinnerBtn");
+    const clearHistoryBtn = document.getElementById("clearHistoryBtn");
+    const removeWinnerCheckbox = document.getElementById("removeWinner");
     const winnerLabel = document.getElementById("winnerLabel");
     const winnerName = document.getElementById("winnerName");
     const winnerTimestamp = document.getElementById("winnerTimestamp");
@@ -407,6 +511,8 @@ Tim</textarea>
     const soundToggle = document.getElementById("soundToggle");
     const uploadInput = document.getElementById("uploadInput");
     const downloadBtn = document.getElementById("downloadBtn");
+    const historyList = document.getElementById("historyList");
+    const historyEmpty = document.getElementById("historyEmpty");
 
     const colours = [
       "#38bdf8", "#facc15", "#fb7185", "#34d399",
@@ -615,7 +721,7 @@ Tim</textarea>
           const winner = names[targetIndex];
           recordWinner(winner);
           spinning = false;
-          spinBtn.disabled = false;
+          spinBtn.disabled = names.length < 2;
           updateBtn.disabled = false;
           shuffleBtn.disabled = false;
         }
@@ -640,6 +746,51 @@ Tim</textarea>
       playWinnerSound();
       announceWinner(winner);
       burstConfetti();
+      renderHistory();
+
+      if (removeWinnerCheckbox.checked) {
+        removeWinnerFromWheel(winner);
+      }
+    }
+
+    function removeWinnerFromWheel(winner) {
+      const currentNames = parseNames();
+      const winnerIndex = currentNames.indexOf(winner);
+      if (winnerIndex === -1) return;
+      currentNames.splice(winnerIndex, 1);
+      namesInput.value = currentNames.join(String.fromCharCode(10));
+      names = currentNames;
+      countHint.textContent = `${names.length} name${names.length === 1 ? "" : "s"} on the wheel.`;
+      fileStatus.textContent = `${winner} was removed from the active wheel.`;
+      spinBtn.disabled = names.length < 2;
+      drawWheel();
+    }
+
+    function renderHistory() {
+      historyList.innerHTML = "";
+      historyEmpty.hidden = history.length > 0;
+      clearHistoryBtn.disabled = history.length === 0;
+
+      [...history].reverse().forEach((entry, reverseIndex) => {
+        const item = document.createElement("li");
+        item.className = "history-item";
+
+        const number = document.createElement("div");
+        number.className = "history-number";
+        number.textContent = `#${history.length - reverseIndex}`;
+
+        const winner = document.createElement("div");
+        winner.className = "history-winner";
+        winner.textContent = entry.winner;
+
+        const meta = document.createElement("div");
+        meta.className = "history-meta";
+        const date = new Date(entry.timestamp);
+        meta.textContent = `${date.toLocaleString()} · ${entry.question}`;
+
+        item.append(number, winner, meta);
+        historyList.appendChild(item);
+      });
     }
 
     function announceWinner(winner) {
@@ -692,9 +843,10 @@ Tim</textarea>
 
     function downloadWheelFile() {
       const payload = {
-        version: 3,
+        version: 4,
         question: titleInput.value.trim() || "Spin the Wheel",
         names: parseNames(),
+        removeWinnerAfterSelection: removeWinnerCheckbox.checked,
         history
       };
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
@@ -724,6 +876,8 @@ Tim</textarea>
           titleInput.value = payload.question;
           namesInput.value = payload.names.map(name => String(name).trim()).filter(Boolean).join(String.fromCharCode(10));
           history = Array.isArray(payload.history) ? payload.history : [];
+          removeWinnerCheckbox.checked = Boolean(payload.removeWinnerAfterSelection);
+          renderHistory();
           updateWheel(`Loaded ${payload.names.length} name${payload.names.length === 1 ? "" : "s"} and ${history.length} recorded spin${history.length === 1 ? "" : "s"} from ${file.name}.`);
         } catch (error) {
           fileStatus.textContent = "That file could not be loaded. Choose a wheel JSON file downloaded from this app.";
@@ -803,6 +957,11 @@ Tim</textarea>
       setTheme(nextTheme);
     });
     soundToggle.addEventListener("click", () => setSoundMuted(!soundMuted));
+    clearHistoryBtn.addEventListener("click", () => {
+      history = [];
+      renderHistory();
+      fileStatus.textContent = "Spin history cleared.";
+    });
 
     clearWinnerBtn.addEventListener("click", () => {
       clearWinnerDisplay(names.length ? "Ready when you are." : "Add at least two names to spin.");
@@ -821,6 +980,7 @@ Tim</textarea>
 
     setTheme(localStorage.getItem("spin-wheel-theme") || "light");
     setSoundMuted(soundMuted);
+    renderHistory();
     updateWheel();
   </script>
 </body>
