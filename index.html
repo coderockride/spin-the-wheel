@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="light" data-wheel-theme="classic">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -7,981 +7,153 @@
   <style>
     :root {
       --bg: #f8fafc;
-      --panel: rgba(255, 255, 255, 0.92);
+      --panel: rgba(255,255,255,.94);
       --text: #172033;
       --muted: #64748b;
       --accent: #0ea5e9;
       --accent-2: #d97706;
-      --border: rgba(15, 23, 42, 0.12);
-      --input-bg: #ffffff;
+      --border: rgba(15,23,42,.12);
+      --input-bg: #fff;
       --input-text: #172033;
       --soft: #e2e8f0;
-      --shadow: rgba(15, 23, 42, 0.16);
+      --shadow: rgba(15,23,42,.16);
+      --row: rgba(15,23,42,.035);
       --canvas-empty: #e2e8f0;
       --canvas-empty-text: #475569;
-      --history-row: rgba(15, 23, 42, 0.035);
     }
-
     html[data-theme="dark"] {
-      --bg: #111827;
-      --panel: rgba(31, 41, 55, 0.92);
-      --text: #f9fafb;
-      --muted: #cbd5e1;
-      --accent: #38bdf8;
-      --accent-2: #facc15;
-      --border: rgba(255, 255, 255, 0.14);
-      --input-bg: #0f172a;
-      --input-text: #f9fafb;
-      --soft: #e5e7eb;
-      --shadow: rgba(0, 0, 0, 0.32);
-      --canvas-empty: #0f172a;
-      --canvas-empty-text: #cbd5e1;
-      --history-row: rgba(255, 255, 255, 0.05);
+      --bg:#111827; --panel:rgba(31,41,55,.94); --text:#f9fafb; --muted:#cbd5e1;
+      --accent:#38bdf8; --accent-2:#facc15; --border:rgba(255,255,255,.14);
+      --input-bg:#0f172a; --input-text:#f9fafb; --soft:#e5e7eb; --shadow:rgba(0,0,0,.32);
+      --row:rgba(255,255,255,.05); --canvas-empty:#0f172a; --canvas-empty-text:#cbd5e1;
     }
-
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      min-height: 100vh;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background:
-        radial-gradient(circle at top left, rgba(56, 189, 248, 0.18), transparent 34%),
-        radial-gradient(circle at bottom right, rgba(250, 204, 21, 0.12), transparent 30%),
-        var(--bg);
-      color: var(--text);
-      display: flex;
-      justify-content: center;
-      padding: 28px;
-      transition: background 0.25s ease, color 0.25s ease;
-    }
-
-    .app {
-      width: min(1200px, 100%);
-      display: grid;
-      grid-template-columns: 390px minmax(0, 1fr);
-      gap: 24px;
-      align-items: start;
-    }
-
-    .panel, .stage {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 24px;
-      box-shadow: 0 22px 70px var(--shadow);
-      backdrop-filter: blur(10px);
-      transition: background 0.25s ease, border-color 0.25s ease;
-    }
-
-    .panel { padding: 22px; }
-
-    .panel-topline {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    .panel-topline h2 {
-      margin: 0;
-      font-size: 1.05rem;
-      letter-spacing: -0.02em;
-    }
-
-    .top-controls {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    h1 {
-      margin: 0 0 18px;
-      font-size: clamp(2rem, 4vw, 4.5rem);
-      text-align: center;
-      letter-spacing: -0.055em;
-      line-height: 0.95;
-    }
-
-    label {
-      display: block;
-      font-weight: 700;
-      margin: 18px 0 8px;
-    }
-
-    input, textarea {
-      width: 100%;
-      border: 1px solid var(--border);
-      background: var(--input-bg);
-      color: var(--input-text);
-      border-radius: 14px;
-      padding: 12px 14px;
-      font: inherit;
-      outline: none;
-      transition: background 0.25s ease, color 0.25s ease, border-color 0.25s ease;
-    }
-
-    textarea {
-      min-height: 220px;
-      resize: vertical;
-      line-height: 1.4;
-    }
-
-    input:focus, textarea:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.16);
-    }
-
-    .hint {
-      color: var(--muted);
-      font-size: 0.92rem;
-      margin-top: 8px;
-    }
-
-    .instructions {
-      margin: 18px 0 0;
-      padding: 14px 16px;
-      border-radius: 16px;
-      background: rgba(14, 165, 233, 0.1);
-      border: 1px solid rgba(14, 165, 233, 0.2);
-    }
-
-    .instructions h3 {
-      margin: 0 0 8px;
-      font-size: 1rem;
-    }
-
-    .instructions ol {
-      margin: 0;
-      padding-left: 1.25rem;
-      color: var(--muted);
-    }
-
-    .instructions li + li { margin-top: 6px; }
-
-    .buttons {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-top: 18px;
-    }
-
-    button, .file-button {
-      border: 0;
-      border-radius: 999px;
-      padding: 12px 18px;
-      font-weight: 800;
-      cursor: pointer;
-      color: #082f49;
-      background: var(--accent);
-      transition: transform 0.12s ease, filter 0.12s ease;
-      font: inherit;
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    button:hover, .file-button:hover { transform: translateY(-1px); filter: brightness(1.05); }
-    button:active, .file-button:active { transform: translateY(1px); }
-    button.secondary, .file-button.secondary { background: var(--soft); color: #111827; }
-    button:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
-
-    .theme-toggle, .sound-toggle {
-      padding: 9px 13px;
-      font-size: 0.9rem;
-    }
-
-    .file-input { display: none; }
-
-    .option-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-top: 16px;
-      padding: 12px 14px;
-      border-radius: 14px;
-      background: var(--history-row);
-      border: 1px solid var(--border);
-    }
-
-    .option-row input {
-      width: auto;
-      margin: 0;
-      accent-color: var(--accent);
-    }
-
-    .option-row label {
-      display: inline;
-      margin: 0;
-      font-weight: 700;
-      cursor: pointer;
-    }
-
-    .stage {
-      padding: 28px;
-      min-height: 760px;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .stage-inner {
-      width: 100%;
-      max-width: 760px;
-      margin: 0 auto;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
-    .wheel-wrap {
-      position: relative;
-      width: min(640px, 100%);
-      aspect-ratio: 1;
-      display: grid;
-      place-items: center;
-      margin: 0 auto;
-      touch-action: none;
-      user-select: none;
-      cursor: grab;
-    }
-
-    .wheel-wrap.dragging { cursor: grabbing; }
-
-    .pointer {
-      position: absolute;
-      top: -4px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 0;
-      height: 0;
-      border-left: 22px solid transparent;
-      border-right: 22px solid transparent;
-      border-top: 48px solid var(--accent-2);
-      z-index: 5;
-      filter: drop-shadow(0 4px 4px rgba(0,0,0,0.24));
-      pointer-events: none;
-    }
-
-    canvas {
-      width: 100%;
-      height: 100%;
-      border-radius: 50%;
-      filter: drop-shadow(0 22px 34px rgba(0,0,0,0.28));
-    }
-
-    .hub {
-      position: absolute;
-      width: 96px;
-      height: 96px;
-      border-radius: 50%;
-      background: #f8fafc;
-      display: grid;
-      place-items: center;
-      color: #111827;
-      font-weight: 950;
-      letter-spacing: -0.04em;
-      box-shadow: inset 0 0 0 8px #cbd5e1, 0 10px 30px rgba(0,0,0,0.24);
-      user-select: none;
-      pointer-events: none;
-    }
-
-    .winner {
-      text-align: center;
-      margin-top: 24px;
-      min-height: 138px;
-    }
-
-    .winner .small {
-      color: var(--muted);
-      font-size: 1rem;
-      margin-bottom: 8px;
-    }
-
-    .winner .name {
-      font-size: clamp(2.2rem, 5vw, 5rem);
-      font-weight: 950;
-      letter-spacing: -0.06em;
-      color: var(--accent-2);
-      text-shadow: 0 4px 20px rgba(250, 204, 21, 0.2);
-    }
-
-    .winner .timestamp {
-      margin-top: 8px;
-      color: var(--muted);
-      font-size: 0.95rem;
-    }
-
-    .history-card {
-      width: 100%;
-      margin-top: 12px;
-      padding: 16px;
-      border: 1px solid var(--border);
-      border-radius: 18px;
-      background: var(--history-row);
-    }
-
-    .history-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin-bottom: 10px;
-    }
-
-    .history-header h2 {
-      margin: 0;
-      font-size: 1.15rem;
-      letter-spacing: -0.03em;
-    }
-
-    .history-list {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-      max-height: 260px;
-      overflow: auto;
-    }
-
-    .history-item {
-      display: grid;
-      grid-template-columns: auto 1fr;
-      gap: 8px 12px;
-      padding: 12px 0;
-      border-top: 1px solid var(--border);
-    }
-
-    .history-item:first-child { border-top: 0; }
-
-    .history-number {
-      color: var(--muted);
-      font-weight: 800;
-    }
-
-    .history-winner {
-      font-weight: 900;
-    }
-
-    .history-meta {
-      grid-column: 2;
-      color: var(--muted);
-      font-size: 0.9rem;
-    }
-
-    .history-empty {
-      color: var(--muted);
-      margin: 0;
-    }
-
-    .confetti {
-      pointer-events: none;
-      position: absolute;
-      inset: 0;
-      overflow: hidden;
-    }
-
-    .confetti span {
-      position: absolute;
-      top: -20px;
-      width: 10px;
-      height: 16px;
-      border-radius: 2px;
-      animation: fall 1.6s linear forwards;
-    }
-
-    @keyframes fall {
-      to {
-        transform: translateY(820px) rotate(680deg);
-        opacity: 0.2;
-      }
-    }
-
-    @media (max-width: 900px) {
-      body { padding: 14px; }
-      .app { grid-template-columns: 1fr; }
-      .stage { min-height: auto; }
-      textarea { min-height: 180px; }
-    }
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:radial-gradient(circle at top left,rgba(56,189,248,.16),transparent 34%),radial-gradient(circle at bottom right,rgba(250,204,21,.1),transparent 30%),var(--bg);color:var(--text);padding:24px;transition:.25s}
+    .app{width:min(1420px,100%);margin:auto;display:grid;grid-template-columns:400px minmax(0,1fr);gap:22px;align-items:start}
+    .panel,.stage{background:var(--panel);border:1px solid var(--border);border-radius:24px;box-shadow:0 22px 70px var(--shadow);backdrop-filter:blur(10px)}
+    .panel{padding:20px;position:sticky;top:16px;max-height:calc(100vh - 32px);overflow:auto}
+    .topline,.inline,.history-header,.stats-header{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.topline{justify-content:space-between}.topline h2,.history-header h2,.stats-header h2{margin:0;font-size:1.05rem}
+    label{display:block;font-weight:750;margin:15px 0 7px}
+    input,textarea,select{width:100%;border:1px solid var(--border);background:var(--input-bg);color:var(--input-text);border-radius:12px;padding:10px 12px;font:inherit;outline:none}
+    textarea{min-height:180px;resize:vertical;line-height:1.35}
+    input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 4px rgba(56,189,248,.16)}
+    button,.file-button{border:0;border-radius:999px;padding:10px 14px;font:inherit;font-weight:800;cursor:pointer;color:#082f49;background:var(--accent);display:inline-flex;align-items:center;justify-content:center;text-decoration:none;transition:.12s}
+    button:hover,.file-button:hover{transform:translateY(-1px);filter:brightness(1.04)} button:disabled{opacity:.5;cursor:not-allowed;transform:none}.secondary{background:var(--soft)!important;color:#111827!important}.danger{background:#fb7185!important;color:white!important}.small-btn{padding:8px 11px;font-size:.9rem}
+    .buttons{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.hint{color:var(--muted);font-size:.9rem;margin-top:7px}.file-input{display:none}
+    .instructions,.mode-box{margin-top:14px;padding:12px 14px;border-radius:14px;background:rgba(14,165,233,.09);border:1px solid rgba(14,165,233,.18)}
+    .instructions h3,.mode-box h3{margin:0 0 7px;font-size:1rem}.instructions ol{margin:0;padding-left:1.2rem;color:var(--muted)}.instructions li+li{margin-top:4px}
+    .option-row{display:flex;gap:9px;align-items:flex-start;margin-top:12px;padding:10px 12px;border-radius:12px;background:var(--row);border:1px solid var(--border)}.option-row input{width:auto;margin-top:2px}.option-row label{margin:0;font-weight:700}
+    .stage{padding:24px;overflow:hidden}.stage-inner{max-width:900px;margin:auto;display:flex;flex-direction:column;align-items:center}.title{margin:0 0 16px;text-align:center;font-size:clamp(2rem,4vw,4.6rem);line-height:.96;letter-spacing:-.055em}
+    .wheel-wrap{position:relative;width:min(680px,100%);aspect-ratio:1;display:grid;place-items:center;margin:auto;touch-action:none;user-select:none;cursor:grab}.wheel-wrap.dragging{cursor:grabbing}.pointer{position:absolute;top:-5px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:22px solid transparent;border-right:22px solid transparent;border-top:48px solid var(--accent-2);z-index:5;filter:drop-shadow(0 4px 4px rgba(0,0,0,.22));pointer-events:none}
+    canvas{width:100%;height:100%;border-radius:50%;filter:drop-shadow(0 22px 34px rgba(0,0,0,.25))}.hub{position:absolute;width:96px;height:96px;border-radius:50%;background:#f8fafc;display:grid;place-items:center;color:#111827;font-weight:950;box-shadow:inset 0 0 0 8px #cbd5e1,0 10px 30px rgba(0,0,0,.22);pointer-events:none}
+    .winner{text-align:center;margin-top:20px;min-height:150px}.winner .small{color:var(--muted)}.winner .name{font-size:clamp(2.2rem,5vw,5rem);font-weight:950;letter-spacing:-.06em;color:var(--accent-2)}.winner .timestamp{margin-top:6px;color:var(--muted)}
+    .cards{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:14px}.card{padding:14px;border-radius:16px;border:1px solid var(--border);background:var(--row)}.card h2{margin:0;font-size:1.05rem}.history-header,.stats-header{justify-content:space-between;margin-bottom:9px}.history-list,.stats-list,.tournament-list{list-style:none;margin:0;padding:0;max-height:250px;overflow:auto}.history-item,.stats-item,.tournament-item{padding:10px 0;border-top:1px solid var(--border)}.history-item:first-child,.stats-item:first-child,.tournament-item:first-child{border-top:0}.muted{color:var(--muted);font-size:.9rem}.winner-line{font-weight:900}.stats-item{display:flex;justify-content:space-between;gap:10px}.badge{display:inline-flex;padding:3px 8px;border-radius:999px;background:var(--soft);color:#111827;font-weight:800;font-size:.8rem}
+    .overlay{position:fixed;inset:0;background:rgba(15,23,42,.72);display:grid;place-items:center;padding:22px;z-index:20}.overlay.hidden{display:none}.overlay-card{width:min(620px,100%);padding:30px;border-radius:24px;background:var(--panel);border:1px solid var(--border);text-align:center;box-shadow:0 30px 80px rgba(0,0,0,.35)}.overlay-card h2{margin:0;font-size:clamp(2rem,6vw,5rem);letter-spacing:-.06em}.overlay-card p{color:var(--muted)}
+    .confetti{pointer-events:none;position:absolute;inset:0;overflow:hidden}.confetti span{position:absolute;top:-20px;width:10px;height:16px;border-radius:2px;animation:fall 1.7s linear forwards}@keyframes fall{to{transform:translateY(900px) rotate(700deg);opacity:.15}}
+    @media(max-width:1050px){.app{grid-template-columns:1fr}.panel{position:static;max-height:none}.cards{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
   <main class="app">
-    <section class="panel">
-      <div class="panel-topline">
-        <h2>Wheel controls</h2>
-        <div class="top-controls">
-          <button id="soundToggle" class="secondary sound-toggle" type="button">🔊 Sound on</button>
-          <button id="themeToggle" class="secondary theme-toggle" type="button">🌙 Dark mode</button>
-        </div>
-      </div>
+    <aside class="panel">
+      <div class="topline"><h2>Wheel controls</h2><div class="inline"><button id="soundToggle" class="secondary small-btn">🔊 Sound on</button><button id="themeToggle" class="secondary small-btn">🌙 Dark mode</button></div></div>
+      <div class="instructions"><h3>How to use it</h3><ol><li>Enter names, optionally using <strong>Name | weight</strong>.</li><li>Update the wheel or load a preset.</li><li>Spin, click, or drag and release.</li></ol></div>
 
-      <div class="instructions">
-        <h3>How to use it</h3>
-        <ol>
-          <li>Type your question and enter one name per line.</li>
-          <li>Select <strong>Update wheel</strong>, or load a saved wheel file.</li>
-          <li>Select <strong>Spin the wheel</strong>, click the wheel, or drag and release it.</li>
-        </ol>
-      </div>
+      <label for="question">Question</label><input id="question" value="Who wins the glorious wheel?" />
+      <label for="names">Names and optional weights</label><textarea id="names">Ada | 1
+Grace | 1
+Linus | 1
+Katherine | 1
+Alan | 1
+Radia | 1
+Margaret | 1
+Tim | 1</textarea>
+      <div class="hint">One entry per line. Example: <code>Kevin | 3</code> gives Kevin three chances.</div>
 
-      <label for="wheelTitle">Question</label>
-      <input id="wheelTitle" value="Who wins the glorious wheel?" />
+      <div class="option-row"><input id="removeWinner" type="checkbox"><label for="removeWinner">Remove each winner after selection</label></div>
+      <div class="option-row"><input id="finalCelebration" type="checkbox" checked><label for="finalCelebration">Use full-screen celebration for final tournament winner</label></div>
 
-      <label for="names">Names</label>
-      <textarea id="names">Ada
-Grace
-Linus
-Katherine
-Alan
-Radia
-Margaret
-Tim</textarea>
-      <div class="hint">Enter one name per line. Blank lines are ignored.</div>
+      <label for="visualTheme">Wheel theme</label><select id="visualTheme"><option value="classic">Classic</option><option value="classroom">Classroom</option><option value="casino">Casino</option><option value="football">Football</option><option value="christmas">Christmas</option><option value="halloween">Halloween</option></select>
 
-      <div class="option-row">
-        <input id="removeWinner" type="checkbox" />
-        <label for="removeWinner">Remove each winner from the wheel after selection</label>
-      </div>
+      <div class="buttons"><button id="updateBtn">Update wheel</button><button id="spinBtn">Spin</button><button id="shuffleBtn" class="secondary">Shuffle</button><button id="clearWinnerBtn" class="secondary">Clear winner</button></div>
 
-      <div class="buttons">
-        <button id="updateBtn" type="button">Update wheel</button>
-        <button id="spinBtn" type="button">Spin the wheel</button>
-        <button id="clearWinnerBtn" class="secondary" type="button">Clear winner</button>
-        <button id="shuffleBtn" class="secondary" type="button">Shuffle names</button>
-      </div>
+      <div class="mode-box"><h3>Presets</h3><div class="inline"><select id="presetSelect"><option value="">Choose a preset</option></select><button id="savePresetBtn" class="secondary small-btn">Save current</button><button id="loadPresetBtn" class="secondary small-btn">Load</button><button id="deletePresetBtn" class="secondary small-btn">Delete</button></div></div>
 
-      <div class="buttons">
-        <label class="file-button secondary" for="uploadInput">Upload saved wheel</label>
-        <input id="uploadInput" class="file-input" type="file" accept="application/json,.json" />
-        <button id="downloadBtn" class="secondary" type="button">Download wheel file</button>
-      </div>
+      <div class="mode-box"><h3>Share</h3><div class="buttons"><button id="shareBtn" class="secondary">Copy share link</button><label class="file-button secondary" for="uploadInput">Upload JSON</label><input id="uploadInput" class="file-input" type="file" accept="application/json,.json"><button id="downloadBtn" class="secondary">Download JSON</button></div></div>
 
-      <div class="hint" id="countHint"></div>
-      <div class="hint" id="fileStatus" aria-live="polite"></div>
-    </section>
+      <div class="mode-box"><h3>Tournament mode</h3><div class="hint">Pair entrants, then spin to resolve each matchup until one champion remains.</div><div class="buttons"><button id="startTournamentBtn" class="secondary">Start tournament</button><button id="resetTournamentBtn" class="secondary">Reset</button></div><div id="tournamentStatus" class="hint"></div></div>
+
+      <div id="fileStatus" class="hint" aria-live="polite"></div>
+    </aside>
 
     <section class="stage">
       <div class="stage-inner">
-        <h1 id="displayTitle">Who wins the glorious wheel?</h1>
-        <div class="wheel-wrap" id="wheelWrap" aria-label="Interactive prize wheel. Click or drag and release to spin.">
-          <div class="pointer" aria-hidden="true"></div>
-          <canvas id="wheel" width="900" height="900"></canvas>
-          <div class="hub">SPIN</div>
+        <h1 id="displayTitle" class="title">Who wins the glorious wheel?</h1>
+        <div id="wheelWrap" class="wheel-wrap" aria-label="Interactive wheel. Click or drag and release to spin."><div class="pointer"></div><canvas id="wheel" width="900" height="900"></canvas><div class="hub">SPIN</div></div>
+        <div class="winner" aria-live="polite"><div id="winnerLabel" class="small">Ready when you are.</div><div id="winnerName" class="name"></div><div id="winnerTimestamp" class="timestamp"></div></div>
+        <div class="cards">
+          <section class="card"><div class="history-header"><h2>Spin history</h2><button id="clearHistoryBtn" class="secondary small-btn">Clear</button></div><p id="historyEmpty" class="muted">No spins recorded yet.</p><ol id="historyList" class="history-list"></ol></section>
+          <section class="card"><div class="stats-header"><h2>Statistics</h2></div><p id="statsEmpty" class="muted">Spin the wheel to populate stats.</p><ol id="statsList" class="stats-list"></ol></section>
+          <section class="card"><div class="history-header"><h2>Tournament</h2></div><p id="tournamentEmpty" class="muted">Tournament not started.</p><ol id="tournamentList" class="tournament-list"></ol></section>
+          <section class="card"><div class="history-header"><h2>Active wheel</h2></div><div id="activeSummary" class="muted"></div></section>
         </div>
-        <div class="winner" aria-live="polite">
-          <div class="small" id="winnerLabel">Ready when you are.</div>
-          <div class="name" id="winnerName"></div>
-          <div class="timestamp" id="winnerTimestamp"></div>
-        </div>
-
-        <section class="history-card" aria-labelledby="historyTitle">
-          <div class="history-header">
-            <h2 id="historyTitle">Spin history</h2>
-            <button id="clearHistoryBtn" class="secondary" type="button">Clear history</button>
-          </div>
-          <p id="historyEmpty" class="history-empty">No spins recorded yet.</p>
-          <ol id="historyList" class="history-list"></ol>
-        </section>
       </div>
-      <div class="confetti" id="confetti"></div>
+      <div id="confetti" class="confetti"></div>
     </section>
   </main>
 
+  <div id="celebrationOverlay" class="overlay hidden"><div class="overlay-card"><div class="badge">🏆 CHAMPION</div><h2 id="overlayWinner"></h2><p id="overlayText"></p><button id="closeOverlayBtn">Close celebration</button></div></div>
+
   <script>
-    const canvas = document.getElementById("wheel");
-    const ctx = canvas.getContext("2d");
-    const wheelWrap = document.getElementById("wheelWrap");
-    const titleInput = document.getElementById("wheelTitle");
-    const namesInput = document.getElementById("names");
-    const displayTitle = document.getElementById("displayTitle");
-    const spinBtn = document.getElementById("spinBtn");
-    const updateBtn = document.getElementById("updateBtn");
-    const shuffleBtn = document.getElementById("shuffleBtn");
-    const clearWinnerBtn = document.getElementById("clearWinnerBtn");
-    const clearHistoryBtn = document.getElementById("clearHistoryBtn");
-    const removeWinnerCheckbox = document.getElementById("removeWinner");
-    const winnerLabel = document.getElementById("winnerLabel");
-    const winnerName = document.getElementById("winnerName");
-    const winnerTimestamp = document.getElementById("winnerTimestamp");
-    const countHint = document.getElementById("countHint");
-    const fileStatus = document.getElementById("fileStatus");
-    const confetti = document.getElementById("confetti");
-    const themeToggle = document.getElementById("themeToggle");
-    const soundToggle = document.getElementById("soundToggle");
-    const uploadInput = document.getElementById("uploadInput");
-    const downloadBtn = document.getElementById("downloadBtn");
-    const historyList = document.getElementById("historyList");
-    const historyEmpty = document.getElementById("historyEmpty");
-
-    const colours = [
-      "#38bdf8", "#facc15", "#fb7185", "#34d399",
-      "#a78bfa", "#f97316", "#22c55e", "#60a5fa",
-      "#f472b6", "#fde047", "#2dd4bf", "#c084fc"
-    ];
-
-    let names = [];
-    let rotation = 0;
-    let spinning = false;
-    let history = [];
-    let dragState = null;
-    let soundMuted = localStorage.getItem("spin-wheel-muted") === "true";
-    let audioContext = null;
-    let lastTickTime = 0;
-    let lastTickSlice = null;
-
-    function splitLines(text) {
-      return text.split(String.fromCharCode(10));
-    }
-
-    function parseNames() {
-      return splitLines(namesInput.value)
-        .map(name => name.trim())
-        .filter(Boolean);
-    }
-
-    function updateWheel(message = "") {
-      names = parseNames();
-      displayTitle.textContent = titleInput.value.trim() || "Spin the Wheel";
-      countHint.textContent = `${names.length} name${names.length === 1 ? "" : "s"} on the wheel.`;
-      clearWinnerDisplay(names.length ? "Ready when you are." : "Add at least two names to spin.");
-      spinBtn.disabled = names.length < 2 || spinning;
-      if (message) fileStatus.textContent = message;
-      drawWheel();
-    }
-
-    function clearWinnerDisplay(labelText = "Ready when you are.") {
-      winnerLabel.textContent = labelText;
-      winnerName.textContent = "";
-      winnerTimestamp.textContent = "";
-    }
-
-    function drawWheel() {
-      const w = canvas.width;
-      const h = canvas.height;
-      const cx = w / 2;
-      const cy = h / 2;
-      const radius = Math.min(cx, cy) - 18;
-
-      ctx.clearRect(0, 0, w, h);
-
-      if (!names.length) {
-        const styles = getComputedStyle(document.documentElement);
-        ctx.fillStyle = styles.getPropertyValue("--canvas-empty").trim();
-        ctx.beginPath();
-        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = styles.getPropertyValue("--canvas-empty-text").trim();
-        ctx.font = "bold 44px system-ui";
-        ctx.textAlign = "center";
-        ctx.fillText("Add names", cx, cy);
-        return;
-      }
-
-      const slice = (Math.PI * 2) / names.length;
-      ctx.save();
-      ctx.translate(cx, cy);
-      ctx.rotate(rotation);
-
-      names.forEach((name, i) => {
-        const start = i * slice - Math.PI / 2;
-        const end = start + slice;
-
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.arc(0, 0, radius, start, end);
-        ctx.closePath();
-        ctx.fillStyle = colours[i % colours.length];
-        ctx.fill();
-
-        ctx.strokeStyle = "rgba(15,23,42,0.5)";
-        ctx.lineWidth = 4;
-        ctx.stroke();
-
-        ctx.save();
-        ctx.rotate(start + slice / 2);
-        ctx.textAlign = "right";
-        ctx.fillStyle = "#0f172a";
-        ctx.font = `900 ${Math.max(20, Math.min(36, 290 / names.length + 14))}px system-ui`;
-        ctx.shadowColor = "rgba(255,255,255,0.4)";
-        ctx.shadowBlur = 2;
-
-        const maxTextWidth = radius * 0.72;
-        let label = name;
-        while (ctx.measureText(label).width > maxTextWidth && label.length > 4) {
-          label = label.slice(0, -2) + "…";
-        }
-
-        ctx.fillText(label, radius - 28, 10);
-        ctx.restore();
-      });
-
-      ctx.beginPath();
-      ctx.arc(0, 0, radius, 0, Math.PI * 2);
-      ctx.lineWidth = 10;
-      ctx.strokeStyle = "rgba(255,255,255,0.9)";
-      ctx.stroke();
-      ctx.restore();
-    }
-
-    function easeOutCubic(t) {
-      return 1 - Math.pow(1 - t, 3);
-    }
-
-    function normalizeAngle(angle) {
-      return ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-    }
-
-    function ensureAudioContext() {
-      if (soundMuted) return null;
-      if (!audioContext) {
-        const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
-        if (!AudioContextCtor) return null;
-        audioContext = new AudioContextCtor();
-      }
-      if (audioContext.state === "suspended") audioContext.resume();
-      return audioContext;
-    }
-
-    function playTone(frequency, duration, volume, type = "sine", delay = 0) {
-      const audio = ensureAudioContext();
-      if (!audio) return;
-
-      const startTime = audio.currentTime + delay;
-      const oscillator = audio.createOscillator();
-      const gain = audio.createGain();
-      oscillator.type = type;
-      oscillator.frequency.setValueAtTime(frequency, startTime);
-      gain.gain.setValueAtTime(0.0001, startTime);
-      gain.gain.exponentialRampToValueAtTime(volume, startTime + 0.005);
-      gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
-      oscillator.connect(gain);
-      gain.connect(audio.destination);
-      oscillator.start(startTime);
-      oscillator.stop(startTime + duration + 0.02);
-    }
-
-    function playSpinTick() {
-      if (soundMuted) return;
-      playTone(420, 0.045, 0.08, "square");
-    }
-
-    function playWinnerSound() {
-      if (soundMuted) return;
-      playTone(523.25, 0.22, 0.12, "sine", 0);
-      playTone(659.25, 0.22, 0.12, "sine", 0.16);
-      playTone(783.99, 0.28, 0.13, "sine", 0.32);
-      playTone(1046.5, 0.45, 0.14, "triangle", 0.48);
-    }
-
-    function maybePlaySpinTick(now) {
-      if (!names.length || soundMuted) return;
-      const slice = (Math.PI * 2) / names.length;
-      const currentSlice = Math.floor(normalizeAngle(rotation) / slice);
-      if (currentSlice !== lastTickSlice && now - lastTickTime > 22) {
-        lastTickSlice = currentSlice;
-        lastTickTime = now;
-        playSpinTick();
-      }
-    }
-
-    function spinWheel(options = {}) {
-      if (spinning || names.length < 2) return;
-
-      ensureAudioContext();
-      spinning = true;
-      spinBtn.disabled = true;
-      updateBtn.disabled = true;
-      shuffleBtn.disabled = true;
-      clearWinnerDisplay("The wheel is deciding...");
-
-      const targetIndex = Math.floor(Math.random() * names.length);
-      const slice = (Math.PI * 2) / names.length;
-      const pointerAngle = -Math.PI / 2;
-      const targetSliceCenter = targetIndex * slice - Math.PI / 2 + slice / 2;
-      const desiredRotation = pointerAngle - targetSliceCenter;
-      const extraTurns = options.extraTurns ?? (5 + Math.floor(Math.random() * 4));
-      const extraSpins = extraTurns * Math.PI * 2;
-      const startRotation = rotation;
-      const endRotation = startRotation + extraSpins + normalizeAngle(desiredRotation - startRotation);
-      const duration = options.duration ?? (4300 + Math.random() * 900);
-      const start = performance.now();
-
-      function animate(now) {
-        const t = Math.min(1, (now - start) / duration);
-        rotation = startRotation + (endRotation - startRotation) * easeOutCubic(t);
-        drawWheel();
-        maybePlaySpinTick(now);
-
-        if (t < 1) {
-          requestAnimationFrame(animate);
-        } else {
-          rotation = endRotation % (Math.PI * 2);
-          drawWheel();
-          const winner = names[targetIndex];
-          recordWinner(winner);
-          spinning = false;
-          spinBtn.disabled = names.length < 2;
-          updateBtn.disabled = false;
-          shuffleBtn.disabled = false;
-        }
-      }
-
-      requestAnimationFrame(animate);
-    }
-
-    function recordWinner(winner) {
-      const timestamp = new Date();
-      const entry = {
-        question: titleInput.value.trim() || "Spin the Wheel",
-        names: [...names],
-        winner,
-        timestamp: timestamp.toISOString()
-      };
-
-      history.push(entry);
-      winnerLabel.textContent = "Winner!";
-      winnerName.textContent = winner;
-      winnerTimestamp.textContent = `Selected ${timestamp.toLocaleString()}`;
-      playWinnerSound();
-      announceWinner(winner);
-      burstConfetti();
-      renderHistory();
-
-      if (removeWinnerCheckbox.checked) {
-        removeWinnerFromWheel(winner);
-      }
-    }
-
-    function removeWinnerFromWheel(winner) {
-      const currentNames = parseNames();
-      const winnerIndex = currentNames.indexOf(winner);
-      if (winnerIndex === -1) return;
-      currentNames.splice(winnerIndex, 1);
-      namesInput.value = currentNames.join(String.fromCharCode(10));
-      names = currentNames;
-      countHint.textContent = `${names.length} name${names.length === 1 ? "" : "s"} on the wheel.`;
-      fileStatus.textContent = `${winner} was removed from the active wheel.`;
-      spinBtn.disabled = names.length < 2;
-      drawWheel();
-    }
-
-    function renderHistory() {
-      historyList.innerHTML = "";
-      historyEmpty.hidden = history.length > 0;
-      clearHistoryBtn.disabled = history.length === 0;
-
-      [...history].reverse().forEach((entry, reverseIndex) => {
-        const item = document.createElement("li");
-        item.className = "history-item";
-
-        const number = document.createElement("div");
-        number.className = "history-number";
-        number.textContent = `#${history.length - reverseIndex}`;
-
-        const winner = document.createElement("div");
-        winner.className = "history-winner";
-        winner.textContent = entry.winner;
-
-        const meta = document.createElement("div");
-        meta.className = "history-meta";
-        const date = new Date(entry.timestamp);
-        meta.textContent = `${date.toLocaleString()} · ${entry.question}`;
-
-        item.append(number, winner, meta);
-        historyList.appendChild(item);
-      });
-    }
-
-    function announceWinner(winner) {
-      if (soundMuted || !("speechSynthesis" in window)) return;
-      speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(`The winner is ${winner}`);
-      utterance.rate = 0.95;
-      utterance.pitch = 1.05;
-      speechSynthesis.speak(utterance);
-    }
-
-    function burstConfetti() {
-      confetti.innerHTML = "";
-      const pieces = 90;
-      for (let i = 0; i < pieces; i++) {
-        const piece = document.createElement("span");
-        piece.style.left = `${Math.random() * 100}%`;
-        piece.style.background = colours[i % colours.length];
-        piece.style.animationDelay = `${Math.random() * 0.22}s`;
-        piece.style.transform = `rotate(${Math.random() * 360}deg)`;
-        confetti.appendChild(piece);
-      }
-      setTimeout(() => confetti.innerHTML = "", 2200);
-    }
-
-    function shuffleNames() {
-      const list = parseNames();
-      for (let i = list.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [list[i], list[j]] = [list[j], list[i]];
-      }
-      namesInput.value = list.join(String.fromCharCode(10));
-      updateWheel("Names shuffled.");
-    }
-
-    function setTheme(theme) {
-      document.documentElement.dataset.theme = theme;
-      themeToggle.textContent = theme === "dark" ? "☀️ Light mode" : "🌙 Dark mode";
-      localStorage.setItem("spin-wheel-theme", theme);
-      drawWheel();
-    }
-
-    function setSoundMuted(muted) {
-      soundMuted = muted;
-      localStorage.setItem("spin-wheel-muted", String(muted));
-      soundToggle.textContent = muted ? "🔇 Sound off" : "🔊 Sound on";
-      soundToggle.setAttribute("aria-pressed", String(!muted));
-      if (muted && "speechSynthesis" in window) speechSynthesis.cancel();
-    }
-
-    function downloadWheelFile() {
-      const payload = {
-        version: 4,
-        question: titleInput.value.trim() || "Spin the Wheel",
-        names: parseNames(),
-        removeWinnerAfterSelection: removeWinnerCheckbox.checked,
-        history
-      };
-      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "spin-the-wheel.json";
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
-      fileStatus.textContent = `Wheel file downloaded with ${history.length} recorded spin${history.length === 1 ? "" : "s"}.`;
-    }
-
-    function uploadWheelFile(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = () => {
-        try {
-          const payload = JSON.parse(reader.result);
-          if (!payload || typeof payload.question !== "string" || !Array.isArray(payload.names)) {
-            throw new Error("Invalid wheel file");
-          }
-
-          titleInput.value = payload.question;
-          namesInput.value = payload.names.map(name => String(name).trim()).filter(Boolean).join(String.fromCharCode(10));
-          history = Array.isArray(payload.history) ? payload.history : [];
-          removeWinnerCheckbox.checked = Boolean(payload.removeWinnerAfterSelection);
-          renderHistory();
-          updateWheel(`Loaded ${payload.names.length} name${payload.names.length === 1 ? "" : "s"} and ${history.length} recorded spin${history.length === 1 ? "" : "s"} from ${file.name}.`);
-        } catch (error) {
-          fileStatus.textContent = "That file could not be loaded. Choose a wheel JSON file downloaded from this app.";
-        } finally {
-          uploadInput.value = "";
-        }
-      };
-      reader.readAsText(file);
-    }
-
-    function pointerAngle(event) {
-      const rect = canvas.getBoundingClientRect();
-      const x = event.clientX - (rect.left + rect.width / 2);
-      const y = event.clientY - (rect.top + rect.height / 2);
-      return Math.atan2(y, x);
-    }
-
-    wheelWrap.addEventListener("pointerdown", event => {
-      if (spinning || names.length < 2) return;
-      ensureAudioContext();
-      wheelWrap.setPointerCapture(event.pointerId);
-      dragState = {
-        pointerId: event.pointerId,
-        lastAngle: pointerAngle(event),
-        lastTime: performance.now(),
-        angularVelocity: 0,
-        moved: false
-      };
-      wheelWrap.classList.add("dragging");
-    });
-
-    wheelWrap.addEventListener("pointermove", event => {
-      if (!dragState || dragState.pointerId !== event.pointerId || spinning) return;
-      const now = performance.now();
-      const angle = pointerAngle(event);
-      let delta = angle - dragState.lastAngle;
-      if (delta > Math.PI) delta -= Math.PI * 2;
-      if (delta < -Math.PI) delta += Math.PI * 2;
-
-      if (Math.abs(delta) > 0.002) dragState.moved = true;
-      rotation += delta;
-      const elapsed = Math.max(16, now - dragState.lastTime);
-      dragState.angularVelocity = delta / elapsed;
-      dragState.lastAngle = angle;
-      dragState.lastTime = now;
-      drawWheel();
-      maybePlaySpinTick(now);
-    });
-
-    function finishPointerSpin(event) {
-      if (!dragState || dragState.pointerId !== event.pointerId) return;
-      const state = dragState;
-      dragState = null;
-      wheelWrap.classList.remove("dragging");
-
-      if (!state.moved) {
-        spinWheel();
-        return;
-      }
-
-      const speed = Math.abs(state.angularVelocity);
-      const extraTurns = Math.max(3, Math.min(10, Math.round(speed * 900)));
-      const duration = Math.max(2600, Math.min(6200, 2800 + speed * 180000));
-      spinWheel({ extraTurns, duration });
-    }
-
-    wheelWrap.addEventListener("pointerup", finishPointerSpin);
-    wheelWrap.addEventListener("pointercancel", finishPointerSpin);
-
-    updateBtn.addEventListener("click", () => updateWheel("Wheel updated."));
-    spinBtn.addEventListener("click", () => spinWheel());
-    shuffleBtn.addEventListener("click", shuffleNames);
-    downloadBtn.addEventListener("click", downloadWheelFile);
-    uploadInput.addEventListener("change", uploadWheelFile);
-    themeToggle.addEventListener("click", () => {
-      const nextTheme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
-      setTheme(nextTheme);
-    });
-    soundToggle.addEventListener("click", () => setSoundMuted(!soundMuted));
-    clearHistoryBtn.addEventListener("click", () => {
-      history = [];
-      renderHistory();
-      fileStatus.textContent = "Spin history cleared.";
-    });
-
-    clearWinnerBtn.addEventListener("click", () => {
-      clearWinnerDisplay(names.length ? "Ready when you are." : "Add at least two names to spin.");
-      if ("speechSynthesis" in window) speechSynthesis.cancel();
-    });
-
-    titleInput.addEventListener("input", () => {
-      displayTitle.textContent = titleInput.value.trim() || "Spin the Wheel";
-    });
-
-    namesInput.addEventListener("input", () => {
-      names = parseNames();
-      countHint.textContent = `${names.length} name${names.length === 1 ? "" : "s"} on the wheel.`;
-      spinBtn.disabled = names.length < 2 || spinning;
-    });
-
-    setTheme(localStorage.getItem("spin-wheel-theme") || "light");
-    setSoundMuted(soundMuted);
-    renderHistory();
-    updateWheel();
+    const $=id=>document.getElementById(id);
+    const canvas=$("wheel"),ctx=canvas.getContext("2d"),wheelWrap=$("wheelWrap");
+    const question=$("question"),namesInput=$("names"),displayTitle=$("displayTitle"),winnerLabel=$("winnerLabel"),winnerName=$("winnerName"),winnerTimestamp=$("winnerTimestamp"),fileStatus=$("fileStatus"),confetti=$("confetti");
+    const historyList=$("historyList"),historyEmpty=$("historyEmpty"),statsList=$("statsList"),statsEmpty=$("statsEmpty"),activeSummary=$("activeSummary"),tournamentList=$("tournamentList"),tournamentEmpty=$("tournamentEmpty"),tournamentStatus=$("tournamentStatus");
+    const paletteMap={classic:["#38bdf8","#facc15","#fb7185","#34d399","#a78bfa","#f97316"],classroom:["#60a5fa","#34d399","#fbbf24","#f472b6","#a78bfa","#22d3ee"],casino:["#dc2626","#111827","#f59e0b","#047857","#7c3aed","#be123c"],football:["#16a34a","#22c55e","#15803d","#facc15","#0ea5e9","#ffffff"],christmas:["#dc2626","#16a34a","#facc15","#ffffff","#166534","#991b1b"],halloween:["#f97316","#111827","#7c3aed","#f59e0b","#4c1d95","#1f2937"]};
+    let entries=[],rotation=0,spinning=false,history=[],dragState=null,soundMuted=localStorage.getItem("spin-wheel-muted")==="true",audioContext=null,lastTickTime=0,lastTickSlice=null,tournament=null;
+    function lines(text){return text.split(String.fromCharCode(10))}
+    function parseEntries(){return lines(namesInput.value).map(v=>v.trim()).filter(Boolean).map(line=>{const parts=line.split("|");const name=(parts[0]||"").trim();const weight=Math.max(1,Math.min(100,parseInt((parts[1]||"1").trim(),10)||1));return{name,weight}}).filter(e=>e.name)}
+    function expandedEntries(){return entries.flatMap(e=>Array.from({length:e.weight},()=>e.name))}
+    function serializeEntries(list=entries){return list.map(e=>`${e.name} | ${e.weight}`).join(String.fromCharCode(10))}
+    function updateWheel(msg=""){entries=parseEntries();displayTitle.textContent=question.value.trim()||"Spin the Wheel";if(msg)fileStatus.textContent=msg;refreshButtons();drawWheel();renderActive()}
+    function refreshButtons(){const enough=expandedEntries().length>=2;$("spinBtn").disabled=!enough||spinning}
+    function clearWinnerDisplay(label="Ready when you are."){winnerLabel.textContent=label;winnerName.textContent="";winnerTimestamp.textContent=""}
+    function drawWheel(){const w=canvas.width,h=canvas.height,cx=w/2,cy=h/2,r=Math.min(cx,cy)-18;ctx.clearRect(0,0,w,h);const expanded=expandedEntries();if(!expanded.length){const s=getComputedStyle(document.documentElement);ctx.fillStyle=s.getPropertyValue("--canvas-empty").trim();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();ctx.fillStyle=s.getPropertyValue("--canvas-empty-text").trim();ctx.font="bold 44px system-ui";ctx.textAlign="center";ctx.fillText("Add names",cx,cy);return}const colors=paletteMap[$("visualTheme").value]||paletteMap.classic;const slice=Math.PI*2/expanded.length;ctx.save();ctx.translate(cx,cy);ctx.rotate(rotation);expanded.forEach((name,i)=>{const start=i*slice-Math.PI/2,end=start+slice;ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,r,start,end);ctx.closePath();ctx.fillStyle=colors[i%colors.length];ctx.fill();ctx.strokeStyle="rgba(15,23,42,.45)";ctx.lineWidth=3;ctx.stroke();ctx.save();ctx.rotate(start+slice/2);ctx.textAlign="right";ctx.fillStyle="#0f172a";ctx.font=`900 ${Math.max(16,Math.min(34,250/expanded.length+12))}px system-ui`;let label=name;const max=r*.7;while(ctx.measureText(label).width>max&&label.length>4)label=label.slice(0,-2)+"…";ctx.fillText(label,r-24,8);ctx.restore()});ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2);ctx.lineWidth=9;ctx.strokeStyle="rgba(255,255,255,.9)";ctx.stroke();ctx.restore()}
+    function normalize(a){return((a%(Math.PI*2))+Math.PI*2)%(Math.PI*2)}
+    function ease(t){return 1-Math.pow(1-t,3)}
+    function ensureAudio(){if(soundMuted)return null;if(!audioContext){const C=window.AudioContext||window.webkitAudioContext;if(!C)return null;audioContext=new C()}if(audioContext.state==="suspended")audioContext.resume();return audioContext}
+    function tone(f,d,v,type="sine",delay=0){const a=ensureAudio();if(!a)return;const st=a.currentTime+delay,o=a.createOscillator(),g=a.createGain();o.type=type;o.frequency.setValueAtTime(f,st);g.gain.setValueAtTime(.0001,st);g.gain.exponentialRampToValueAtTime(v,st+.005);g.gain.exponentialRampToValueAtTime(.0001,st+d);o.connect(g);g.connect(a.destination);o.start(st);o.stop(st+d+.03)}
+    function tick(now){const exp=expandedEntries();if(!exp.length||soundMuted)return;const sl=Math.PI*2/exp.length,cur=Math.floor(normalize(rotation)/sl);if(cur!==lastTickSlice&&now-lastTickTime>22){lastTickSlice=cur;lastTickTime=now;tone(420,.045,.07,"square")}}
+    function winnerSound(final=false){if(soundMuted)return;[523,659,784,1046].forEach((f,i)=>tone(f,final?.5:.24,final?.16:.12,i===3?"triangle":"sine",i*.15))}
+    function spinWheel(opts={}){if(spinning||expandedEntries().length<2)return;ensureAudio();spinning=true;refreshButtons();clearWinnerDisplay("The wheel is deciding...");const exp=expandedEntries(),targetIndex=Math.floor(Math.random()*exp.length),slice=Math.PI*2/exp.length,pointer=-Math.PI/2,targetCenter=targetIndex*slice-Math.PI/2+slice/2,desired=pointer-targetCenter,startRot=rotation,endRot=startRot+(opts.turns??(5+Math.floor(Math.random()*4)))*Math.PI*2+normalize(desired-startRot),duration=opts.duration??(4300+Math.random()*900),start=performance.now();function anim(now){const t=Math.min(1,(now-start)/duration);rotation=startRot+(endRot-startRot)*ease(t);drawWheel();tick(now);if(t<1)requestAnimationFrame(anim);else{rotation=endRot%(Math.PI*2);drawWheel();finishSpin(exp[targetIndex]);spinning=false;refreshButtons()}}requestAnimationFrame(anim)}
+    function finishSpin(winner){const ts=new Date(),entry={question:question.value.trim()||"Spin the Wheel",entries:entries.map(e=>({...e})),winner,timestamp:ts.toISOString(),mode:tournament?"tournament":"standard"};history.push(entry);winnerLabel.textContent=tournament?"Tournament winner!":"Winner!";winnerName.textContent=winner;winnerTimestamp.textContent=`Selected ${ts.toLocaleString()}`;winnerSound(false);announce(winner);burst(90);if(tournament)advanceTournament(winner);else if($("removeWinner").checked)removeFromWheel(winner);renderAll()}
+    function announce(w){if(soundMuted||!("speechSynthesis"in window))return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(`The winner is ${w}`);u.rate=.95;u.pitch=1.05;speechSynthesis.speak(u)}
+    function burst(n){confetti.innerHTML="";const colors=paletteMap[$("visualTheme").value]||paletteMap.classic;for(let i=0;i<n;i++){const p=document.createElement("span");p.style.left=`${Math.random()*100}%`;p.style.background=colors[i%colors.length];p.style.animationDelay=`${Math.random()*.25}s`;confetti.appendChild(p)}setTimeout(()=>confetti.innerHTML="",2200)}
+    function removeFromWheel(winner){const idx=entries.findIndex(e=>e.name===winner);if(idx<0)return;entries.splice(idx,1);namesInput.value=serializeEntries();fileStatus.textContent=`${winner} was removed from the active wheel.`;drawWheel();refreshButtons();renderActive()}
+    function renderHistory(){historyList.innerHTML="";historyEmpty.hidden=history.length>0;[...history].reverse().forEach((e,i)=>{const li=document.createElement("li");li.className="history-item";li.innerHTML=`<div class="winner-line">#${history.length-i} ${escapeHtml(e.winner)}</div><div class="muted">${new Date(e.timestamp).toLocaleString()} · ${escapeHtml(e.question)}</div>`;historyList.appendChild(li)})}
+    function renderStats(){const counts={};history.forEach(e=>counts[e.winner]=(counts[e.winner]||0)+1);const rows=Object.entries(counts).sort((a,b)=>b[1]-a[1]);statsList.innerHTML="";statsEmpty.hidden=rows.length>0;rows.forEach(([name,count])=>{const li=document.createElement("li");li.className="stats-item";li.innerHTML=`<span>${escapeHtml(name)}</span><span><strong>${count}</strong> win${count===1?"":"s"} · ${Math.round(count/history.length*100)}%</span>`;statsList.appendChild(li)})}
+    function renderActive(){const totalWeight=entries.reduce((s,e)=>s+e.weight,0);activeSummary.innerHTML=entries.length?`${entries.length} entrant${entries.length===1?"":"s"}<br>${totalWeight} weighted slot${totalWeight===1?"":"s"}`:"No entrants loaded."}
+    function startTournament(){const unique=entries.map(e=>e.name);if(unique.length<2){fileStatus.textContent="Add at least two entrants for a tournament.";return}tournament={round:1,queue:[...unique],nextRound:[],matches:[],currentMatch:null,champion:null};setupNextMatch();renderTournament()}
+    function setupNextMatch(){if(!tournament)return;if(tournament.queue.length===1&&!tournament.nextRound.length){finishTournament(tournament.queue[0]);return}if(tournament.queue.length<2){tournament.queue=[...tournament.nextRound];tournament.nextRound=[];tournament.round+=1;if(tournament.queue.length===1){finishTournament(tournament.queue[0]);return}}const a=tournament.queue.shift(),b=tournament.queue.shift();tournament.currentMatch={a,b};entries=[{name:a,weight:1},{name:b,weight:1}];namesInput.value=serializeEntries();question.value=`Tournament Round ${tournament.round}: ${a} vs ${b}`;updateWheel();tournamentStatus.textContent=`Round ${tournament.round}: ${a} vs ${b}`}
+    function advanceTournament(winner){if(!tournament||!tournament.currentMatch)return;const m={...tournament.currentMatch,winner};tournament.matches.push(m);tournament.nextRound.push(winner);tournament.currentMatch=null;setupNextMatch();renderTournament()}
+    function finishTournament(champion){if(!tournament)return;tournament.champion=champion;tournamentStatus.textContent=`Champion: ${champion}`;renderTournament();winnerSound(true);burst(180);if($("finalCelebration").checked){$("overlayWinner").textContent=champion;$("overlayText").textContent="Tournament champion crowned.";$("celebrationOverlay").classList.remove("hidden")}}
+    function renderTournament(){tournamentList.innerHTML="";tournamentEmpty.hidden=!!tournament;if(!tournament)return;tournament.matches.forEach((m,i)=>{const li=document.createElement("li");li.className="tournament-item";li.innerHTML=`<div class="winner-line">Match ${i+1}: ${escapeHtml(m.a)} vs ${escapeHtml(m.b)}</div><div class="muted">Winner: ${escapeHtml(m.winner)}</div>`;tournamentList.appendChild(li)});if(tournament.currentMatch){const li=document.createElement("li");li.className="tournament-item";li.innerHTML=`<div class="winner-line">Current: ${escapeHtml(tournament.currentMatch.a)} vs ${escapeHtml(tournament.currentMatch.b)}</div><div class="muted">Spin to resolve matchup</div>`;tournamentList.appendChild(li)}if(tournament.champion){const li=document.createElement("li");li.className="tournament-item";li.innerHTML=`<div class="winner-line">🏆 Champion: ${escapeHtml(tournament.champion)}</div>`;tournamentList.appendChild(li)}}
+    function renderAll(){renderHistory();renderStats();renderTournament();renderActive()}
+    function savePreset(){const name=prompt("Preset name?");if(!name)return;const all=JSON.parse(localStorage.getItem("wheel-presets")||"{}");all[name]={question:question.value,entries:parseEntries(),visualTheme:$("visualTheme").value,removeWinner:$("removeWinner").checked};localStorage.setItem("wheel-presets",JSON.stringify(all));refreshPresetOptions();fileStatus.textContent=`Saved preset: ${name}`}
+    function refreshPresetOptions(){const all=JSON.parse(localStorage.getItem("wheel-presets")||"{}");const sel=$("presetSelect"),current=sel.value;sel.innerHTML='<option value="">Choose a preset</option>';Object.keys(all).sort().forEach(n=>{const o=document.createElement("option");o.value=n;o.textContent=n;sel.appendChild(o)});sel.value=current}
+    function loadPreset(){const name=$("presetSelect").value;if(!name)return;const p=JSON.parse(localStorage.getItem("wheel-presets")||"{}")[name];if(!p)return;question.value=p.question;entries=p.entries||[];namesInput.value=serializeEntries(entries);$("visualTheme").value=p.visualTheme||"classic";$("removeWinner").checked=!!p.removeWinner;updateWheel(`Loaded preset: ${name}`)}
+    function deletePreset(){const name=$("presetSelect").value;if(!name)return;const all=JSON.parse(localStorage.getItem("wheel-presets")||"{}");delete all[name];localStorage.setItem("wheel-presets",JSON.stringify(all));refreshPresetOptions();fileStatus.textContent=`Deleted preset: ${name}`}
+    function makeShareLink(){const payload={q:question.value,e:parseEntries(),t:$("visualTheme").value,r:$("removeWinner").checked};const encoded=btoa(unescape(encodeURIComponent(JSON.stringify(payload))));const url=`${location.origin}${location.pathname}#wheel=${encoded}`;navigator.clipboard?.writeText(url).then(()=>fileStatus.textContent="Share link copied.").catch(()=>prompt("Copy this link",url))}
+    function loadFromHash(){const h=location.hash;if(!h.startsWith("#wheel="))return;try{const p=JSON.parse(decodeURIComponent(escape(atob(h.slice(7)))));question.value=p.q||question.value;entries=p.e||[];namesInput.value=serializeEntries(entries);$("visualTheme").value=p.t||"classic";$("removeWinner").checked=!!p.r;updateWheel("Loaded shared wheel link.")}catch{fileStatus.textContent="That share link could not be read."}}
+    function downloadJson(){const data={version:5,question:question.value,entries:parseEntries(),history,tournament,visualTheme:$("visualTheme").value,removeWinner:$("removeWinner").checked};const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="spin-the-wheel.json";a.click();URL.revokeObjectURL(url)}
+    function uploadJson(ev){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);question.value=d.question||"Spin the Wheel";entries=d.entries||[];namesInput.value=serializeEntries(entries);history=Array.isArray(d.history)?d.history:[];tournament=d.tournament||null;$("visualTheme").value=d.visualTheme||"classic";$("removeWinner").checked=!!d.removeWinner;updateWheel(`Loaded ${f.name}`);renderAll()}catch{fileStatus.textContent="Could not load that JSON file."}ev.target.value=""};r.readAsText(f)}
+    function escapeHtml(v){return String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[c]))}
+    function setSoundMuted(v){soundMuted=v;localStorage.setItem("spin-wheel-muted",String(v));$("soundToggle").textContent=v?"🔇 Sound off":"🔊 Sound on";if(v&&"speechSynthesis"in window)speechSynthesis.cancel()}
+    function setTheme(v){document.documentElement.dataset.theme=v;$("themeToggle").textContent=v==="dark"?"☀️ Light mode":"🌙 Dark mode";localStorage.setItem("spin-wheel-theme",v)}
+    function pointerAngle(ev){const r=canvas.getBoundingClientRect();return Math.atan2(ev.clientY-(r.top+r.height/2),ev.clientX-(r.left+r.width/2))}
+    wheelWrap.addEventListener("pointerdown",ev=>{if(spinning||expandedEntries().length<2)return;ensureAudio();wheelWrap.setPointerCapture(ev.pointerId);dragState={id:ev.pointerId,last:pointerAngle(ev),time:performance.now(),vel:0,moved:false};wheelWrap.classList.add("dragging")});wheelWrap.addEventListener("pointermove",ev=>{if(!dragState||dragState.id!==ev.pointerId||spinning)return;const now=performance.now(),a=pointerAngle(ev);let d=a-dragState.last;if(d>Math.PI)d-=Math.PI*2;if(d<-Math.PI)d+=Math.PI*2;if(Math.abs(d)>.002)dragState.moved=true;rotation+=d;dragState.vel=d/Math.max(16,now-dragState.time);dragState.last=a;dragState.time=now;drawWheel();tick(now)});function release(ev){if(!dragState||dragState.id!==ev.pointerId)return;const s=dragState;dragState=null;wheelWrap.classList.remove("dragging");if(!s.moved)return spinWheel();spinWheel({turns:Math.max(3,Math.min(10,Math.round(Math.abs(s.vel)*900))),duration:Math.max(2600,Math.min(6200,2800+Math.abs(s.vel)*180000))})}wheelWrap.addEventListener("pointerup",release);wheelWrap.addEventListener("pointercancel",release)
+    $("updateBtn").onclick=()=>{clearWinnerDisplay();updateWheel("Wheel updated.")};$("spinBtn").onclick=()=>spinWheel();$("shuffleBtn").onclick=()=>{entries=parseEntries();for(let i=entries.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[entries[i],entries[j]]=[entries[j],entries[i]]}namesInput.value=serializeEntries();updateWheel("Names shuffled.")};$("clearWinnerBtn").onclick=()=>clearWinnerDisplay();$("clearHistoryBtn").onclick=()=>{history=[];renderAll()};$("visualTheme").onchange=()=>drawWheel();$("themeToggle").onclick=()=>setTheme(document.documentElement.dataset.theme==="dark"?"light":"dark");$("soundToggle").onclick=()=>setSoundMuted(!soundMuted);$("savePresetBtn").onclick=savePreset;$("loadPresetBtn").onclick=loadPreset;$("deletePresetBtn").onclick=deletePreset;$("shareBtn").onclick=makeShareLink;$("downloadBtn").onclick=downloadJson;$("uploadInput").onchange=uploadJson;$("startTournamentBtn").onclick=startTournament;$("resetTournamentBtn").onclick=()=>{tournament=null;tournamentStatus.textContent="";renderTournament()};$("closeOverlayBtn").onclick=()=>$("celebrationOverlay").classList.add("hidden");question.oninput=()=>displayTitle.textContent=question.value.trim()||"Spin the Wheel";namesInput.oninput=()=>{entries=parseEntries();drawWheel();refreshButtons();renderActive()};
+    setTheme(localStorage.getItem("spin-wheel-theme")||"light");setSoundMuted(soundMuted);refreshPresetOptions();loadFromHash();updateWheel();renderAll();
   </script>
 </body>
 </html>
